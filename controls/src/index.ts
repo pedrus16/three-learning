@@ -9,6 +9,7 @@ import {
   Scene,
   WebGLRenderer,
 } from "three";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 
 // Scene
 const scene = new Scene();
@@ -26,15 +27,18 @@ const size = {
 };
 const cursor = { x: 0, y: 0 };
 
+const canvas = document.querySelector<HTMLElement>("canvas.webgl");
+
 // Camera
 const camera = new PerspectiveCamera(75, size.width / size.height);
 camera.position.z = 3;
 scene.add(camera);
 
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true;
+
 // Renderer
-const renderer = new WebGLRenderer({
-  canvas: document.querySelector("canvas.webgl"),
-});
+const renderer = new WebGLRenderer({ canvas });
 renderer.setSize(size.width, size.height);
 
 const axesHelper = new AxesHelper(2);
@@ -48,29 +52,10 @@ let lastRender = 0;
 const SPEED = Math.PI * 2;
 const clock = new Clock();
 const renderLoop: FrameRequestCallback = (time) => {
-  const elapsed = clock.getElapsedTime();
-  const delta = lastRender - time;
-  // mesh.rotation.set(
-  //   mesh.rotation.x + SPEED * (delta / 1000),
-  //   0,
-  //   mesh.rotation.z + (SPEED * 0.25 * delta) / 1000
-  // );
-
-  // mesh.position.y = Math.cos(elapsed * 2) * 0.5;
-
-  camera.position.x = Math.sin(cursor.x * Math.PI * 2) * 2;
-  camera.position.z = -Math.cos(cursor.x * Math.PI * 2) * 2;
-  camera.position.y = cursor.y * 3;
-  camera.lookAt(mesh.position);
-
+  controls.update();
   renderer.render(scene, camera);
   lastRender = time;
   window.requestAnimationFrame(renderLoop);
 };
 
 renderLoop(0);
-
-window.addEventListener("mousemove", (event) => {
-  cursor.x = event.clientX / size.width - 0.5;
-  cursor.y = event.clientY / size.height - 0.5;
-});

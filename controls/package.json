@@ -1,0 +1,46 @@
+{
+  "devDependencies": {
+    "@swc/cli": "^0.1.55",
+    "@swc/core": "^1.2.155",
+    "css-loader": "^6.7.1",
+    "html-webpack-plugin": "^5.5.0",
+    "mini-css-extract-plugin": "^2.6.0",
+    "swc-loader": "^0.1.15",
+    "webpack": "^5.70.0",
+    "webpack-cli": "^4.9.2",
+    "webpack-dev-server": "^4.7.4"
+  },
+  "name": "webpack",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "@types/three": "^0.138.0",
+    "braces": "^3.0.2",
+    "commander": "^7.2.0",
+    "fast-glob": "^3.2.11",
+    "fastq": "^1.13.0",
+    "fill-range": "^7.0.1",
+    "glob-parent": "^5.1.2",
+    "is-extglob": "^2.1.1",
+    "is-glob": "^4.0.3",
+    "is-number": "^7.0.0",
+    "merge2": "^1.4.1",
+    "micromatch": "^4.0.4",
+    "picomatch": "^2.3.1",
+    "queue-microtask": "^1.2.3",
+    "reusify": "^1.0.4",
+    "run-parallel": "^1.2.0",
+    "slash": "^3.0.0",
+    "source-map": "^0.7.3",
+    "three": "^0.138.3",
+    "to-regex-range": "^5.0.1"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "webpack serve --open",
+    "build": "webpack"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": ""
+}
