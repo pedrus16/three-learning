@@ -6,6 +6,7 @@ import {
   BoxGeometry,
   BufferAttribute,
   Clock,
+  CubeTextureLoader,
   DoubleSide,
   FrontSide,
   Material,
@@ -39,6 +40,13 @@ import metalnessImage from "./assets/door/Door_Wood_001_metallic.jpg";
 import roughnessImage from "./assets/door/Door_Wood_001_roughness.jpg";
 import matcapImage from "./assets/matcap/1.jpg";
 
+import nx from "./assets/cubemap/nx.png";
+import ny from "./assets/cubemap/ny.png";
+import nz from "./assets/cubemap/nz.png";
+import px from "./assets/cubemap/px.png";
+import py from "./assets/cubemap/py.png";
+import pz from "./assets/cubemap/pz.png";
+
 // Scene
 const scene = new Scene();
 
@@ -53,6 +61,9 @@ const ambientOcclusionTexture = textureLoader.load(ambientOcclusionImage);
 const metalnessTexture = textureLoader.load(metalnessImage);
 const roughnessTexture = textureLoader.load(roughnessImage);
 const matcapTexture = textureLoader.load(matcapImage);
+
+const cubeTextureLoader = new CubeTextureLoader();
+const environmentMapTexture = cubeTextureLoader.load([nx, ny, nz, px, py, pz]);
 
 // Object
 const materials = {
@@ -77,6 +88,7 @@ const materials = {
     normalMap: normalTexture,
     alphaMap: alphaTexture,
     transparent: true,
+    envMap: environmentMapTexture,
   }),
 };
 
