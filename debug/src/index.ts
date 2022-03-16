@@ -2,35 +2,31 @@ import "./style.css";
 import {
   AxesHelper,
   BoxGeometry,
-  BufferAttribute,
-  BufferGeometry,
-  Clock,
   Mesh,
   MeshBasicMaterial,
   PerspectiveCamera,
   Scene,
-  SphereGeometry,
   WebGLRenderer,
 } from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
+import { GUI } from "lil-gui";
+import gsap from "gsap";
+
+const settings = {
+  color: 0xff0000,
+  spin: () => {
+    gsap.to(mesh.rotation, { duration: 2, y: mesh.rotation.y + Math.PI * 2 });
+  },
+};
 
 // Scene
 const scene = new Scene();
 
 // Object
-const wireframeMaterial = new MeshBasicMaterial({
-  color: 0xff00ff,
-  wireframe: true,
-});
-const sphereGeometry = new SphereGeometry(1, 8, 8);
-const bufferGeometry = new BufferGeometry();
-const positions = new Float32Array([0, 0, 2, 0, 2, 0, 2, 0, 0]);
-const positionAttribute = new BufferAttribute(positions, 3);
-bufferGeometry.setAttribute("position", positionAttribute);
-const sphereMesh = new Mesh(sphereGeometry, wireframeMaterial);
-const triangleMesh = new Mesh(bufferGeometry, wireframeMaterial);
-scene.add(sphereMesh);
-scene.add(triangleMesh);
+const geometry = new BoxGeometry(1, 1, 1);
+const material = new MeshBasicMaterial({ color: settings.color });
+const mesh = new Mesh(geometry, material);
+scene.add(mesh);
 
 // Sizes
 const size = {
@@ -84,3 +80,14 @@ window.addEventListener("dblclick", () => {
     document.exitFullscreen();
   }
 });
+
+// Debug
+const gui = new GUI({ width: 250 });
+gui.add(mesh.position, "x").min(-2).max(2).step(0.25);
+gui.add(mesh.position, "y").min(-2).max(2).step(0.25);
+gui.add(mesh, "visible");
+gui
+  .addColor(settings, "color")
+  .onChange(() => material.color.set(settings.color));
+gui.add(material, "wireframe");
+gui.add(settings, "spin");
