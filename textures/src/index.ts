@@ -4,21 +4,21 @@ import {
   BoxGeometry,
   ClampToEdgeWrapping,
   LinearFilter,
-  LinearMipmapNearestFilter,
+  LinearMipMapNearestFilter,
   LoadingManager,
   Mesh,
   MeshBasicMaterial,
   MirroredRepeatWrapping,
   NearestFilter,
-  NearestMipmapLinearFilter,
-  NearestMipmapNearestFilter,
-  LinearMipmapLinearFilter,
+  NearestMipMapLinearFilter,
+  NearestMipMapNearestFilter,
   PerspectiveCamera,
   RepeatWrapping,
   Scene,
   Texture,
   TextureLoader,
   WebGLRenderer,
+  LinearMipMapLinearFilter,
 } from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { GUI } from "lil-gui";
@@ -37,6 +37,10 @@ const settings = {
   spin: () => {
     gsap.to(mesh.rotation, { duration: 1, y: mesh.rotation.y + Math.PI * 2 });
   },
+  wrapS: RepeatWrapping,
+  wrapT: MirroredRepeatWrapping,
+  minFilter: LinearMipMapLinearFilter,
+  magFilter: NearestFilter,
 };
 
 // Scene
@@ -55,7 +59,9 @@ image.src = colorImage;
 // Optional: Using a Loading Manager
 const loadingManager = new LoadingManager();
 loadingManager.onStart = () => console.log("manager: loading started");
-loadingManager.onLoad = () => console.log("manager: loading done");
+loadingManager.onLoad = () => {
+  console.log("manager: loading done");
+};
 loadingManager.onProgress = () => console.log("manager: loading in progress");
 loadingManager.onError = () => console.log("manager: loading error");
 
@@ -70,8 +76,8 @@ const metalnessTexture = textureLoader.load(metalnessImage);
 const roughnessTexture = textureLoader.load(roughnessImage);
 
 // UV
-colorTexture.wrapS = RepeatWrapping;
-colorTexture.wrapT = MirroredRepeatWrapping;
+colorTexture.wrapS = settings.wrapS;
+colorTexture.wrapT = settings.wrapT;
 colorTexture.repeat.x = 2;
 colorTexture.repeat.y = 3;
 colorTexture.offset.x = 0.5;
@@ -81,7 +87,9 @@ colorTexture.center.x = 0.5;
 colorTexture.center.y = 0.5;
 
 // Mipmapping
-colorTexture.minFilter = LinearMipmapNearestFilter;
+colorTexture.generateMipmaps = true;
+colorTexture.minFilter = settings.minFilter;
+colorTexture.magFilter = settings.magFilter;
 
 // Object
 const geometry = new BoxGeometry(1, 1);
@@ -121,9 +129,7 @@ const gui = new GUI({ width: 250 });
 gui.add(mesh.position, "x").min(-2).max(2).step(0.25);
 gui.add(mesh.position, "y").min(-2).max(2).step(0.25);
 gui.add(mesh, "visible");
-gui
-  .addColor(settings, "color")
-  .onChange(() => material.color.set(settings.color));
+gui.addColor(settings, "color").onChange((color) => material.color.set(color));
 gui.add(material, "wireframe");
 gui.add(settings, "spin");
 
@@ -140,24 +146,63 @@ textureFolder.add(colorTexture.center, "x").min(0).max(1).name("center X");
 textureFolder.add(colorTexture.center, "y").min(0).max(1).name("center Y");
 
 // TODO Fix settings not updating
-textureFolder.add(colorTexture, "wrapS", {
-  ClampToEdgeWrapping,
-  RepeatWrapping,
-  MirroredRepeatWrapping,
-});
-textureFolder.add(colorTexture, "wrapT", {
-  ClampToEdgeWrapping,
-  RepeatWrapping,
-  MirroredRepeatWrapping,
-});
-textureFolder.add(colorTexture, "minFilter", {
-  NearestFilter,
-  NearestMipmapNearestFilter,
-  NearestMipmapLinearFilter,
-  LinearFilter,
-  LinearMipmapNearestFilter,
-  LinearMipmapLinearFilter,
-});
+textureFolder
+  .add(settings, "wrapS", {
+    ClampToEdgeWrapping,
+    RepeatWrapping,
+    MirroredRepeatWrapping,
+  })
+  .onChange((wrap) => {
+    colorTexture.wrapS = wrap;
+    colorTexture.needsUpdate = true;
+  });
+
+textureFolder
+  .add(settings, "wrapT", {
+    ClampToEdgeWrapping,
+    RepeatWrapping,
+    MirroredRepeatWrapping,
+  })
+  .onChange((wrap) => {
+    colorTexture.wrapT = wrap;
+    colorTexture.needsUpdate = true;
+  });
+
+textureFolder
+  .add(settings, "minFilter", {
+    NearestFilter,
+    NearestMipMapNearestFilter,
+    NearestMipMapLinearFilter,
+    LinearFilter,
+    LinearMipMapNearestFilter,
+    LinearMipMapLinearFilter,
+  })
+  .onChange((minFilter) => {
+    colorTexture.minFilter = minFilter;
+    colorTexture.needsUpdate = true;
+  });
+
+textureFolder
+  .add(settings, "magFilter", {
+    NearestFilter,
+    LinearFilter,
+  })
+  .onChange((minFilter) => {
+    colorTexture.minFilter = minFilter;
+    colorTexture.needsUpdate = true;
+  });
+
+textureFolder
+  .add(material, "map", {
+    color: colorTexture,
+    alpha: alphaTexture,
+    height: heightTexture,
+    normal: normalTexture,
+    ambientOcclusion: ambientOcclusionTexture,
+    metalness: metalnessTexture,
+    roughness: roughnessTexture,
+  })
+  .name("texture");
 
 // Render
 let lastRender = 0;
@@ -167,7 +212,6 @@ const renderLoop: FrameRequestCallback = (time) => {
   lastRender = time;
   window.requestAnimationFrame(renderLoop);
 };
-
 renderLoop(0);
 
 window.addEventListener("resize", () => {
