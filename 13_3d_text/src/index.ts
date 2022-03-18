@@ -72,7 +72,7 @@ const size = {
 };
 
 const settings = {
-  font: fontBlocks,
+  font: fontFuture,
   text: "Spaghetti",
   bevelSize: 0.02,
   bevelSegments: 1,
