@@ -18,24 +18,7 @@ import {
 } from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 
-import doorAOImage from "./assets/door/Door_Wood_001_ambientOcclusion.jpg";
-import doorColorImage from "./assets/door/Door_Wood_001_basecolor.jpg";
-import doorHeightImage from "./assets/door/Door_Wood_001_height.png";
-import doorMetalnessImage from "./assets/door/Door_Wood_001_metallic.jpg";
-import doorNormalImage from "./assets/door/Door_Wood_001_normal.jpg";
-import doorAlphaImage from "./assets/door/Door_Wood_001_opacity.jpg";
-import doorRoughnessImage from "./assets/door/Door_Wood_001_roughness.jpg";
-import grassAO from "./assets/grass/GroundForest003_AO_1K.jpg";
-import grassColor from "./assets/grass/GroundForest003_COL_VAR1_1K.jpg";
-import grassDisplacement from "./assets/grass/GroundForest003_DISP_1K.jpg";
-import grassGloss from "./assets/grass/GroundForest003_GLOSS_1K.jpg";
-import grassNormal from "./assets/grass/GroundForest003_NRM_1K.jpg";
 import particleImage from "./assets/particles/star_01.png";
-import stoneAO from "./assets/stone/StoneBricksBeige015_AO_1K.jpg";
-import stoneColor from "./assets/stone/StoneBricksBeige015_COL_1K.jpg";
-import stoneDisplacement from "./assets/stone/StoneBricksBeige015_DISP_1K.jpg";
-import stoneRoughness from "./assets/stone/StoneBricksBeige015_GLOSS_1K.jpg";
-import stoneNormal from "./assets/stone/StoneBricksBeige015_NRM_1K.jpg";
 
 
 // Sizes
