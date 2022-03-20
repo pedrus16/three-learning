@@ -1,0 +1,28 @@
+html,
+body {
+  /* overflow: hidden; */
+}
+
+html {
+  background: #1c1c1c;
+  color: #dddddd;
+}
+
+body {
+  margin: 0;
+}
+
+.webgl {
+  position: fixed;
+  top: 0;
+  left: 0;
+  outline: none;
+  z-index: -1;
+}
+
+section {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
