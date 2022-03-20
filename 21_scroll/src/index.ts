@@ -32,7 +32,7 @@ const size = {
 const canvas = document.querySelector<HTMLElement>("canvas.webgl");
 
 const settings = {
-  color: 0x8affe2,
+  color: 0xd6efff,
   particleCount: 2000,
   spacing: 4,
   distance: 4,
@@ -43,7 +43,9 @@ const settings = {
 
 // Debug
 const gui = new GUI().close();
-gui.addColor(settings, "color");
+gui.addColor(settings, "color").onChange((color) => {
+  particlesMaterial.color.set(color);
+});
 gui
   .add(settings, "spacing")
   .min(0)
@@ -198,8 +200,8 @@ window.addEventListener("scroll", () => {
     currentSection = newSection;
 
     gsap.to(meshes[currentSection].rotation, {
-      duration: 1.5,
-      ease: Power2.easeInOut,
+      duration: 3,
+      ease: Power2.easeOut,
       x: "+=6",
       y: "+=3",
       z: "+=1.5",
