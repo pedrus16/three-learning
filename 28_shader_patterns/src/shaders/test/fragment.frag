@@ -68,6 +68,7 @@ vec3 pattern10()
 vec3 pattern11()
 {
     float strength = step(0.8, mod(vUv.y * 10.0, 1.0)) + step(0.8, mod(vUv.x * 10.0, 1.0));
+    strength = clamp(strength, 0.0, 1.0);
     return vec3(strength);
 }
 
@@ -90,7 +91,8 @@ vec3 pattern14()
 {
     float barX = step(0.8, mod(vUv.y * 10.0, 1.0)) * step(0.4, mod(vUv.x * 10.0, 1.0));
     float barY = step(0.4, mod(vUv.y * 10.0, 1.0)) * step(0.8, mod(vUv.x * 10.0, 1.0));
-    return vec3(barX + barY);
+    float strength = clamp(barX + barY, 0.0, 1.0);
+    return vec3(strength);
 }
 
 /* Grid Crosses */
@@ -98,7 +100,8 @@ vec3 pattern15()
 {
     float barX = step(0.8, mod(vUv.y * 10.0, 1.0)) * step(0.4, mod(vUv.x * 10.0 - 0.2, 1.0));
     float barY = step(0.4, mod(vUv.y * 10.0 - 0.2, 1.0)) * step(0.8, mod(vUv.x * 10.0, 1.0));
-    return vec3(barX + barY);
+    float strength = clamp(barX + barY, 0.0, 1.0);
+    return vec3(strength);
 }
 
 /* Mirror Gradient Y */
@@ -349,8 +352,90 @@ vec3 pattern45()
     return vec3(strength);
 }
 
+/* Perlin Noise */
+vec4 permute(vec4 x)
+{
+    return mod(((x*34.0)+1.0)*x, 289.0);
+}
+
+vec2 fade(vec2 t)
+{
+    return t*t*t*(t*(t*6.0-15.0)+10.0);
+}
+
+float cnoise(vec2 P)
+{
+    vec4 Pi = floor(P.xyxy) + vec4(0.0, 0.0, 1.0, 1.0);
+    vec4 Pf = fract(P.xyxy) - vec4(0.0, 0.0, 1.0, 1.0);
+    Pi = mod(Pi, 289.0); // To avoid truncation effects in permutation
+    vec4 ix = Pi.xzxz;
+    vec4 iy = Pi.yyww;
+    vec4 fx = Pf.xzxz;
+    vec4 fy = Pf.yyww;
+    vec4 i = permute(permute(ix) + iy);
+    vec4 gx = 2.0 * fract(i * 0.0243902439) - 1.0; // 1/41 = 0.024...
+    vec4 gy = abs(gx) - 0.5;
+    vec4 tx = floor(gx + 0.5);
+    gx = gx - tx;
+    vec2 g00 = vec2(gx.x,gy.x);
+    vec2 g10 = vec2(gx.y,gy.y);
+    vec2 g01 = vec2(gx.z,gy.z);
+    vec2 g11 = vec2(gx.w,gy.w);
+    vec4 norm = 1.79284291400159 - 0.85373472095314 * vec4(dot(g00, g00), dot(g01, g01), dot(g10, g10), dot(g11, g11));
+    g00 *= norm.x;
+    g01 *= norm.y;
+    g10 *= norm.z;
+    g11 *= norm.w;
+    float n00 = dot(g00, vec2(fx.x, fy.x));
+    float n10 = dot(g10, vec2(fx.y, fy.y));
+    float n01 = dot(g01, vec2(fx.z, fy.z));
+    float n11 = dot(g11, vec2(fx.w, fy.w));
+    vec2 fade_xy = fade(Pf.xy);
+    vec2 n_x = mix(vec2(n00, n01), vec2(n10, n11), fade_xy.x);
+    float n_xy = mix(n_x.x, n_x.y, fade_xy.y);
+    return 2.3 * n_xy;
+}
+
+vec3 pattern46()
+{
+    float strength = cnoise(vUv * 10.0);
+    return vec3(strength);
+}
+
+vec3 pattern47()
+{
+    float strength = step(0.1, cnoise(vUv * 10.0));
+    return vec3(strength);
+}
+
+vec3 pattern48()
+{
+    float strength = 1.0 - abs(cnoise(vUv * 10.0));
+    return vec3(strength);
+}
+
+vec3 pattern49()
+{
+    float strength = sin(cnoise(vUv * 10.0) * 20.0);
+    return vec3(strength);
+}
+
+vec3 pattern50()
+{
+    float strength = step(0.9, sin(cnoise(vUv * 10.0) * 20.0));
+    return vec3(strength);
+}
+
+/* Colors */
+vec3 mixColor(vec3 mask)
+{
+    vec3 blackColor = vec3(0.0);
+    vec3 uvColor = vec3(vUv, 1.0);
+    vec3 mixedColor = mix(blackColor, uvColor, mask);
+    return mixedColor;
+}
 
 void main()
 {
-    gl_FragColor = vec4(pattern45(), 1.0);
+    gl_FragColor = vec4(mixColor(pattern15()), 1.0);
 }
