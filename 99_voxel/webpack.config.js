@@ -15,14 +15,14 @@ module.exports = {
       minify: true,
     }),
     new MiniCSSExtractPlugin(),
-    // new CopyPlugin({
-    //   patterns: [
-    //     {
-    //       from: path.resolve(__dirname, "src/assets/models"),
-    //       to: path.resolve(__dirname, "dist/assets/models"),
-    //     },
-    //   ],
-    // }),
+    new CopyPlugin({
+      patterns: [
+        {
+          from: path.resolve(__dirname, "src/assets/models"),
+          to: path.resolve(__dirname, "dist/assets/models"),
+        },
+      ],
+    }),
   ],
   output: {
     filename: "main.js",
@@ -76,6 +76,15 @@ module.exports = {
         type: "asset/resource",
         generator: {
           filename: "assets/gltf/[hash][ext]",
+        },
+      },
+
+      // VOX
+      {
+        test: /\.(vox)$/,
+        type: "asset/resource",
+        generator: {
+          filename: "assets/vox/[hash][ext]",
         },
       },
 

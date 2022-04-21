@@ -106,7 +106,7 @@ material.onBeforeCompile = (shader) => {
     `
       #include <beginnormal_vertex>
 
-      float angle = sin(position.z + uTime) * 0.4;
+      float angle = sin(position.y + uTime * 2.0) * 1.4;
       mat2 rotateMatrix = get2dRotateMatrix(angle);
 
       objectNormal.xz = rotateMatrix * objectNormal.xz;
@@ -132,26 +132,26 @@ depthMaterial.onBeforeCompile = (shader) => {
   shader.vertexShader = shader.vertexShader.replace(
     "#include <common>",
     `
-            #include <common>
+      #include <common>
 
-            uniform float uTime;
+      uniform float uTime;
 
-            mat2 get2dRotateMatrix(float _angle)
-            {
-                return mat2(cos(_angle), - sin(_angle), sin(_angle), cos(_angle));
-            }
-        `
+      mat2 get2dRotateMatrix(float _angle)
+      {
+          return mat2(cos(_angle), - sin(_angle), sin(_angle), cos(_angle));
+      }
+    `
   );
   shader.vertexShader = shader.vertexShader.replace(
     "#include <begin_vertex>",
     `
-            #include <begin_vertex>
+      #include <begin_vertex>
 
-            float angle = sin(position.z + uTime) * 0.4;
-            mat2 rotateMatrix = get2dRotateMatrix(angle);
+      float angle = sin(position.y + uTime * 2.0) * 1.4;
+      mat2 rotateMatrix = get2dRotateMatrix(angle);
 
-            transformed.xz = rotateMatrix * transformed.xz;
-        `
+      transformed.xz = rotateMatrix * transformed.xz;
+    `
   );
 };
 
