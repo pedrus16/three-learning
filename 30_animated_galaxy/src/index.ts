@@ -9,11 +9,14 @@ import {
   Color,
   DirectionalLight,
   DirectionalLightHelper,
+  Mesh,
+  MeshBasicMaterial,
   PCFShadowMap,
   PerspectiveCamera,
   Points,
   Scene,
   ShaderMaterial,
+  SphereGeometry,
   TextureLoader,
   WebGLRenderer
 } from "three";
@@ -35,17 +38,17 @@ const settings = {
   count: 100000,
   radius: 4,
   branches: 3,
-  spin: 0,
+  spin: 0.4,
   randomness: 0.2,
-  randomnessPower: 0.5,
-  innerColor: new Color(0xffc800),
+  randomnessPower: 0.25,
+  innerColor: new Color(0xff9924),
   outerColor: new Color(0x007bff),
 };
 
 // Debug
 const gui = new GUI({ width: 250 });
 
-const renderer = new WebGLRenderer({ canvas });
+const renderer = new WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
 // Scene
@@ -161,10 +164,18 @@ gui.add(settings, "radius").min(0).max(8).onChange(generateGalaxy);
 gui.add(settings, "branches").min(1).max(50).step(1).onChange(generateGalaxy);
 gui.add(settings, "spin").min(-5).max(5).onChange(generateGalaxy);
 gui.add(settings, "randomness").min(0).max(10).onChange(generateGalaxy);
-gui.add(settings, "randomnessPower").min(1).max(10).onChange(generateGalaxy);
+gui.add(settings, "randomnessPower").min(0).max(1).onChange(generateGalaxy);
 gui.addColor(settings, "innerColor").onChange(generateGalaxy);
 gui.addColor(settings, "outerColor").onChange(generateGalaxy);
 gui.add(material.uniforms.uSize, "value").min(0).max(64).step(1).name("size");
+
+// Blachole
+const sphereGeometry = new SphereGeometry(0.16, 64, 32);
+const blackholeMaterial = new MeshBasicMaterial({
+  color: 0x000000,
+});
+const blackhole = new Mesh(sphereGeometry, blackholeMaterial);
+scene.add(blackhole);
 
 // Ambient Light
 const ambientLight = new AmbientLight(0xffffff, 0.5);
