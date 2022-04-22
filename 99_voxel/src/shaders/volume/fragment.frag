@@ -43,7 +43,7 @@ vec3 normal( vec3 coord ) {
     return normalize( vec3( x, y, z ) );
 }
 
-void main(){
+void main() {
     vec3 rayDir = normalize( vDirection );
     vec2 bounds = hitBox( vOrigin, rayDir );
     if ( bounds.x > bounds.y ) discard;
@@ -56,8 +56,8 @@ void main(){
         float d = sample1( p + 0.5 );
         if ( d > threshold ) {
             vec3 n = normal( p + 0.5 );
-            color = texture(map, p + 0.5);
-            float len = dot(normalize(vec3(0.0, 0.0, 1.0)), n);
+            color = texture(map, p + 0.5).rgba;
+            float len = dot(normalize(vec3(0.0, 1.0, 1.0)), n);
             color = mix(vec4(color.rgb * 0.5, color.a), color, len);
             break;
         }

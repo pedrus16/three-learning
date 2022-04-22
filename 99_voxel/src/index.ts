@@ -57,14 +57,14 @@ class VOXData3DTexture extends Data3DTexture {
     console.log(size);
 
     const offsety = size.x;
-    const offsetz = size.x * size.y;
+    const offsetz = size.x * size.z;
 
     const array = new Uint8Array(size.x * size.y * size.z * 4);
 
     for (let j = 0; j < data.length; j += 4) {
       const x = data[j + 0];
-      const y = data[j + 1];
-      const z = data[j + 2];
+      const y = data[j + 2];
+      const z = data[j + 1];
       const c = data[j + 3];
 
       const index = x + y * offsety + z * offsetz;
@@ -81,7 +81,7 @@ class VOXData3DTexture extends Data3DTexture {
       array[i4 + 3] = 255;
     }
 
-    super(array, size.x, size.y, size.z);
+    super(array, size.x, size.z, size.y);
 
     this.format = RGBAFormat;
     this.minFilter = NearestFilter;
@@ -104,7 +104,7 @@ loader.load("./assets/models/monu10.vox", function (chunks) {
       glslVersion: GLSL3,
       uniforms: {
         map: { value: data },
-        threshold: { value: 0.0 },
+        threshold: { value: 0.8 },
         steps: { value: 512 },
       },
       vertexShader: vertex,
@@ -113,7 +113,12 @@ loader.load("./assets/models/monu10.vox", function (chunks) {
     });
 
     const mesh = new Mesh(geometry, material);
-    mesh.rotation.set(Math.PI * -0.5, 0, 0);
+    mesh.scale.set(
+      chunk.size.x / chunk.size.x,
+      chunk.size.z / chunk.size.x,
+      chunk.size.y / chunk.size.x
+    );
+    // mesh.rotation.set(Math.PI * -0.5, 0, 0);
     scene.add(mesh);
   }
 });
