@@ -1,22 +1,21 @@
 import "./style.css";
 
 import { GUI } from "lil-gui";
+import Stats from "stats.js";
 import {
   ACESFilmicToneMapping,
   BackSide,
   BoxGeometry,
-  Data3DTexture,
   DirectionalLight,
   GLSL3,
   Mesh,
-  NearestFilter,
   PCFShadowMap,
   PerspectiveCamera,
-  RGBAFormat,
   Scene,
   ShaderMaterial,
   sRGBEncoding,
   TextureLoader,
+  Vector3,
   WebGLRenderer
 } from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
@@ -25,6 +24,7 @@ import { VOXLoader } from "three/examples/jsm/loaders/VOXLoader";
 import teapot from "./assets/models/teapot.vox";
 import fragment from "./shaders/volume/fragment.frag";
 import vertex from "./shaders/volume/vertex.vert";
+import { VOXData3DTexture } from "./voxel/VOXData3DTexture.ts";
 
 
 // Sizes
@@ -48,49 +48,6 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 const scene = new Scene();
 const textureLoader = new TextureLoader();
 
-class VOXData3DTexture extends Data3DTexture {
-  constructor(chunk) {
-    const data = chunk.data;
-    const size = chunk.size;
-    const palette = chunk.palette;
-
-    console.log(size);
-
-    const offsety = size.x;
-    const offsetz = size.x * size.z;
-
-    const array = new Uint8Array(size.x * size.y * size.z * 4);
-
-    for (let j = 0; j < data.length; j += 4) {
-      const x = data[j + 0];
-      const y = data[j + 2];
-      const z = data[j + 1];
-      const c = data[j + 3];
-
-      const index = x + y * offsety + z * offsetz;
-
-      const hex = palette[c];
-      const r = (hex >> 0) & 0xff;
-      const g = (hex >> 8) & 0xff;
-      const b = (hex >> 16) & 0xff;
-
-      const i4 = index * 4;
-      array[i4] = r;
-      array[i4 + 1] = g;
-      array[i4 + 2] = b;
-      array[i4 + 3] = 255;
-    }
-
-    super(array, size.x, size.z, size.y);
-
-    this.format = RGBAFormat;
-    this.minFilter = NearestFilter;
-    this.magFilter = NearestFilter;
-    this.unpackAlignment = 1;
-    this.needsUpdate = true;
-  }
-}
-
 // Voxel Loader
 var loader = new VOXLoader();
 loader.load("./assets/models/monu10.vox", function (chunks) {
@@ -100,12 +57,16 @@ loader.load("./assets/models/monu10.vox", function (chunks) {
     const geometry = new BoxGeometry(1, 1, 1);
     const data = new VOXData3DTexture(chunk);
 
+    console.log(chunk.size);
+
     const material = new ShaderMaterial({
       glslVersion: GLSL3,
       uniforms: {
-        map: { value: data },
-        threshold: { value: 0.8 },
-        steps: { value: 512 },
+        uMap: { value: data },
+        uSize: { value: new Vector3(chunk.size.x, chunk.size.z, chunk.size.y) },
+        uThreshold: { value: 0.8 },
+        uResolutionMultiplier: { value: 2 },
+        uNormalSampling: { value: 2 },
       },
       vertexShader: vertex,
       fragmentShader: fragment,
@@ -113,12 +74,6 @@ loader.load("./assets/models/monu10.vox", function (chunks) {
     });
 
     const mesh = new Mesh(geometry, material);
-    mesh.scale.set(
-      chunk.size.x / chunk.size.x,
-      chunk.size.z / chunk.size.x,
-      chunk.size.y / chunk.size.x
-    );
-    // mesh.rotation.set(Math.PI * -0.5, 0, 0);
     scene.add(mesh);
   }
 });
@@ -153,8 +108,14 @@ renderer.outputEncoding = sRGBEncoding;
 renderer.toneMapping = ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1;
 
+// Stats
+var stats = new Stats();
+stats.showPanel(0); // 0: fps, 1: ms, 2: mb, 3+: custom
+document.body.appendChild(stats.dom);
+
 let lastRender = 0;
 const renderLoop: FrameRequestCallback = (time) => {
+  stats.begin();
   const elapsedTimeSec = time / 1000;
   const deltaMs = time - lastRender;
 
@@ -164,6 +125,7 @@ const renderLoop: FrameRequestCallback = (time) => {
 
   renderer.render(scene, camera);
   lastRender = time;
+  stats.end();
   window.requestAnimationFrame(renderLoop);
 };
 

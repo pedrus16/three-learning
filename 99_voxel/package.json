@@ -35,6 +35,7 @@
     "run-parallel": "^1.2.0",
     "slash": "^3.0.0",
     "source-map": "^0.7.3",
+    "stats.js": "^0.17.0",
     "three": "^0.138.3",
     "to-regex-range": "^5.0.1"
   },
