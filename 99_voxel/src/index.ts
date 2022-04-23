@@ -3,7 +3,6 @@ import "./style.css";
 import { GUI } from "lil-gui";
 import Stats from "stats.js";
 import {
-  ACESFilmicToneMapping,
   BackSide,
   BoxGeometry,
   DirectionalLight,
@@ -11,9 +10,11 @@ import {
   Mesh,
   PCFShadowMap,
   PerspectiveCamera,
+  Points,
+  PointsMaterial,
+  RGBAFormat,
   Scene,
   ShaderMaterial,
-  sRGBEncoding,
   TextureLoader,
   Vector3,
   WebGLRenderer
@@ -25,6 +26,7 @@ import teapot from "./assets/models/teapot.vox";
 import fragment from "./shaders/volume/fragment.frag";
 import vertex from "./shaders/volume/vertex.vert";
 import { VOXData3DTexture } from "./voxel/VOXData3DTexture.ts";
+import { VOXPointGeometry } from "./voxel/VOXPointGeometry.ts";
 
 
 // Sizes
@@ -56,14 +58,13 @@ loader.load("./assets/models/monu10.vox", function (chunks) {
 
     const geometry = new BoxGeometry(1, 1, 1);
     const data = new VOXData3DTexture(chunk);
-
-    console.log(chunk.size);
-
     const material = new ShaderMaterial({
       glslVersion: GLSL3,
       uniforms: {
         uMap: { value: data },
-        uSize: { value: new Vector3(chunk.size.x, chunk.size.z, chunk.size.y) },
+        uSize: {
+          value: new Vector3(chunk.size.x, chunk.size.z, chunk.size.y),
+        },
         uThreshold: { value: 0.8 },
         uResolutionMultiplier: { value: 2 },
         uNormalSampling: { value: 2 },
@@ -73,8 +74,20 @@ loader.load("./assets/models/monu10.vox", function (chunks) {
       side: BackSide,
     });
 
-    const mesh = new Mesh(geometry, material);
-    scene.add(mesh);
+    const volumeMesh = new Mesh(geometry, material);
+    scene.add(volumeMesh);
+
+    const pointGeometry = new VOXPointGeometry(chunk);
+    const pointMesh = new Points(
+      pointGeometry,
+      new PointsMaterial({
+        size: 0.02,
+        vertexColors: true,
+        format: RGBAFormat,
+      })
+    );
+    pointMesh.position.set(1, 0, 0);
+    scene.add(pointMesh);
   }
 });
 
@@ -104,9 +117,9 @@ renderer.setSize(size.width, size.height);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = PCFShadowMap;
 renderer.physicallyCorrectLights = true;
-renderer.outputEncoding = sRGBEncoding;
-renderer.toneMapping = ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1;
+// renderer.outputEncoding = sRGBEncoding;
+// renderer.toneMapping = ACESFilmicToneMapping;
+// renderer.toneMappingExposure = 1;
 
 // Stats
 var stats = new Stats();

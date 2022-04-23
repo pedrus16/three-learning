@@ -2,7 +2,11 @@ import { Data3DTexture, NearestFilter, RGBAFormat } from "three";
 
 
 export class VOXData3DTexture extends Data3DTexture {
-  constructor(chunk) {
+  constructor(chunk: {
+    data: Uint8Array;
+    size: { x: number; y: number; z: number };
+    palette: number[];
+  }) {
     const data = chunk.data;
     const size = chunk.size;
     const palette = chunk.palette;
