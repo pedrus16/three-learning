@@ -190,6 +190,7 @@ renderer.setSize(size.width, size.height);
 renderer.physicallyCorrectLights = true;
 renderer.outputEncoding = sRGBEncoding;
 renderer.toneMapping = ReinhardToneMapping;
+renderer.toneMappingExposure = 2;
 
 gui
   .add(renderer, "toneMapping", {
