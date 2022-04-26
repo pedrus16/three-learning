@@ -1,0 +1,111 @@
+html,
+body {
+  overflow: hidden;
+}
+
+body {
+  margin: 0;
+}
+
+.webgl {
+  position: fixed;
+  top: 0;
+  left: 0;
+  outline: none;
+}
+
+.loading-bar {
+  --progress: 0%;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 50%;
+  height: 0.5rem;
+  background-color: rgba(255 255 255 / 25%);
+  transform: translate(-50%, -50%);
+  transition: all 100ms ease-out;
+  pointer-events: none;
+}
+
+.loading-bar.hidden {
+  opacity: 0;
+}
+
+.loading-bar::after {
+  content: "";
+  display: block;
+  width: var(--progress);
+  height: 100%;
+  background-color: rgba(255 255 255 / 100%);
+  transition: all 100ms ease-out;
+}
+
+.point {
+  --size: 2rem;
+
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.point .label {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+
+  background-color: rgba(0 0 0 / 56%);
+  color: rgba(255 255 255 / 80%);
+  border-radius: 50%;
+  border: 1px solid rgba(255 255 255 / 56%);
+  width: var(--size);
+  height: var(--size);
+  text-align: center;
+  vertical-align: middle;
+  line-height: var(--size);
+
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.75rem;
+
+  cursor: help;
+
+  transition: border-color 125ms ease-out;
+
+  transform: translate(-50%, -50%) scale(0);
+  transition: transform 0.3s;
+}
+
+.point.visible .label {
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.point:hover .label {
+  border-color: rgba(255 255 255 / 80%);
+}
+
+.point .text {
+  position: absolute;
+  top: calc(var(--size) + 0.5rem);
+  left: 50%;
+  transform: translate(-50%, 0);
+  width: max-content;
+  max-width: 16rem;
+
+  padding: 1rem;
+  background-color: rgba(0 0 0 / 56%);
+  color: rgba(255 255 255 / 80%);
+  border-radius: 0.25rem;
+  box-shadow: 0 0.5rem 0.5rem rgba(0 0 0 / 25%);
+
+  font-family: Arial, Helvetica, sans-serif;
+
+  opacity: 0;
+  transition: opacity 125ms ease-out;
+
+  pointer-events: none;
+}
+
+.point:hover .text {
+  opacity: 1;
+  /* pointer-events: all; */
+}
