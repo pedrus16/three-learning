@@ -3,30 +3,25 @@ import "./style.css";
 import { GUI } from "lil-gui";
 import Stats from "stats.js";
 import {
-  BackSide,
-  BoxGeometry,
   DirectionalLight,
-  GLSL3,
-  Mesh,
   PCFShadowMap,
   PerspectiveCamera,
   Points,
-  PointsMaterial,
-  RGBAFormat,
   Scene,
   ShaderMaterial,
+  sRGBEncoding,
   TextureLoader,
-  Vector3,
   WebGLRenderer
 } from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
-import { VOXLoader } from "three/examples/jsm/loaders/VOXLoader";
 
 import teapot from "./assets/models/teapot.vox";
 import fragment from "./shaders/volume/fragment.frag";
 import vertex from "./shaders/volume/vertex.vert";
-import { VOXData3DTexture } from "./voxel/VOXData3DTexture.ts";
-import { VOXPointGeometry } from "./voxel/VOXPointGeometry.ts";
+import voxelFragment from "./shaders/voxel/fragment.frag";
+import voxelVertex from "./shaders/voxel/vertex.vert";
+import { VXLLoader } from "./voxel/VXLLoader.ts";
+import { VXLPointGeometry } from "./voxel/VXLPointGeometry.ts";
 
 
 // Sizes
@@ -50,45 +45,145 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 const scene = new Scene();
 const textureLoader = new TextureLoader();
 
+// Camera
+// const camera = new OrthographicCamera(-20, 20, -20, 20, 0.1, 1000);
+const camera = new PerspectiveCamera(60, size.width / size.height);
+camera.position.x = 10;
+camera.position.y = 10;
+camera.position.z = 10;
+scene.add(camera);
+
 // Voxel Loader
-var loader = new VOXLoader();
-loader.load("./assets/models/monu10.vox", function (chunks) {
-  for (var i = 0; i < chunks.length; i++) {
-    const chunk = chunks[i];
+// const voxLoader = new VOXLoader();
+// voxLoader.load("./assets/models/monu10.vox", function (chunks) {
+//   for (var i = 0; i < chunks.length; i++) {
+//     const chunk = chunks[i];
 
-    const geometry = new BoxGeometry(1, 1, 1);
-    const data = new VOXData3DTexture(chunk);
-    const material = new ShaderMaterial({
-      glslVersion: GLSL3,
-      uniforms: {
-        uMap: { value: data },
-        uSize: {
-          value: new Vector3(chunk.size.x, chunk.size.z, chunk.size.y),
-        },
-        uThreshold: { value: 0.8 },
-        uResolutionMultiplier: { value: 2 },
-        uNormalSampling: { value: 2 },
-      },
-      vertexShader: vertex,
-      fragmentShader: fragment,
-      side: BackSide,
+//     const geometry = new BoxGeometry(1, 1, 1);
+//     const data = new VOXData3DTexture(chunk);
+//     const material = new ShaderMaterial({
+//       glslVersion: GLSL3,
+//       uniforms: {
+//         uMap: { value: data },
+//         uSize: {
+//           value: new Vector3(chunk.size.x, chunk.size.z, chunk.size.y),
+//         },
+//         uThreshold: { value: 0.8 },
+//         uResolutionMultiplier: { value: 4 },
+//         uNormalSampling: { value: 4 },
+//       },
+//       vertexShader: vertex,
+//       fragmentShader: fragment,
+//       side: BackSide,
+//     });
+
+//     const volumeMesh = new Mesh(geometry, material);
+//     scene.add(volumeMesh);
+
+//     const pointGeometry = new VOXPointGeometry(chunk);
+//     const pointMesh = new Points(
+//       pointGeometry,
+//       new PointsMaterial({
+//         size: 0.02,
+//         vertexColors: true,
+//         format: RGBAFormat,
+//       })
+//     );
+//     pointMesh.position.set(1, 0, 0);
+//     scene.add(pointMesh);
+//   }
+// });
+
+// VXL Loader
+const vxlLoader = new VXLLoader();
+
+const voxelMaterial = new ShaderMaterial({
+  vertexColors: true,
+  vertexShader: voxelVertex,
+  fragmentShader: voxelFragment,
+  uniforms: {
+    uSize: { value: 100.0 * renderer.getPixelRatio() },
+    uViewPos: { value: camera.position },
+  },
+});
+
+const UNITS = [
+  /* SOVIET */
+  { parts: ["smcv"] },
+  { parts: ["htnk", "htnktur", "htnkbarl"] },
+  { parts: ["ttnk", "ttnktur"] },
+  { parts: ["mtnk", "mtnkbarl", "mtnktur"] },
+  { parts: ["harv", "harvtur"] },
+  { parts: ["htk", "htkbarl"] },
+  { parts: ["flaktur"] },
+  { parts: ["bpln"] },
+  { parts: ["cdest"] },
+  { parts: ["dred"] },
+  { parts: ["hyd"] },
+  { parts: ["laser"] },
+  { parts: ["sub"] },
+  { parts: ["trs"] },
+  { parts: ["trucka"] },
+  { parts: ["v3"] },
+  { parts: ["zep"] },
+
+  /* ALLIES */
+  { parts: ["mcv"] },
+  { parts: ["bfrt"] },
+  { parts: ["gtgcanbarl", "gtgcantur"] },
+  { parts: ["cmin"] },
+  { parts: ["lcrf"] },
+  { parts: ["falc"] },
+  { parts: ["rtnk"] },
+  { parts: ["tnkd"] },
+  { parts: ["aegis"] },
+
+  /* YURI */
+  { parts: ["pcv"] },
+  { parts: ["bsub"] },
+  { parts: ["hovr"] },
+  { parts: ["ltnk", "ltnktur"] },
+  { parts: ["mind"] },
+  { parts: ["smin"] },
+  { parts: ["tele", "teletur"] },
+
+  /* CIVILIANS */
+  { parts: ["cona"] },
+  { parts: ["cop"] },
+  { parts: ["cplane"] },
+  { parts: ["cruise"] },
+  { parts: ["limo"] },
+  { parts: ["pdplane"] },
+  { parts: ["pick"] },
+  { parts: ["propa"] },
+  { parts: ["ptruck"] },
+  { parts: ["tractor"] },
+  { parts: ["tug"] },
+
+  // { parts: ["1tnk", "1tnkbarl"] },
+  // { parts: ["2tnk", "2tnktur", "2tnkbarl"] },
+  // { parts: ["3tnk", "3tnktur", "3tnkbarl"] },
+  // { parts: ["4tnk", "4tnktur", "4tnkbarl"] },
+];
+
+const ROW_SIZE = 6;
+const SPACING = 12;
+UNITS.forEach(({ parts }, index) => {
+  const unitScene = new Scene();
+  unitScene.position.set(
+    SPACING * ((index % ROW_SIZE) - ROW_SIZE * 0.5),
+    0,
+    (Math.floor(index / ROW_SIZE) - ROW_SIZE * 0.5) * SPACING
+  );
+  scene.add(unitScene);
+  parts.forEach((name) => {
+    vxlLoader.load(`./assets/models/vxl/${name}.vxl`, (data) => {
+      const geometry = new VXLPointGeometry(data);
+      const mesh = new Points(geometry, voxelMaterial);
+      mesh.position.set(0, 0, 0);
+      unitScene.add(mesh);
     });
-
-    const volumeMesh = new Mesh(geometry, material);
-    scene.add(volumeMesh);
-
-    const pointGeometry = new VOXPointGeometry(chunk);
-    const pointMesh = new Points(
-      pointGeometry,
-      new PointsMaterial({
-        size: 0.02,
-        vertexColors: true,
-        format: RGBAFormat,
-      })
-    );
-    pointMesh.position.set(1, 0, 0);
-    scene.add(pointMesh);
-  }
+  });
 });
 
 // Directional Light
@@ -100,13 +195,6 @@ directionalLight.shadow.normalBias = 0.05;
 directionalLight.position.set(0.25, 2, -2.25);
 scene.add(directionalLight);
 
-// Camera
-const camera = new PerspectiveCamera(60, size.width / size.height);
-camera.position.x = 2;
-camera.position.y = 2;
-camera.position.z = 2;
-scene.add(camera);
-
 const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = true;
 
@@ -117,7 +205,7 @@ renderer.setSize(size.width, size.height);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = PCFShadowMap;
 renderer.physicallyCorrectLights = true;
-// renderer.outputEncoding = sRGBEncoding;
+renderer.outputEncoding = sRGBEncoding;
 // renderer.toneMapping = ACESFilmicToneMapping;
 // renderer.toneMappingExposure = 1;
 
@@ -135,6 +223,11 @@ const renderLoop: FrameRequestCallback = (time) => {
   controls.update();
 
   // Update objects
+  voxelMaterial.uniforms.uViewPos.value = camera.position;
+
+  // if (mtnk) {
+  // subMesh.rotation.set(0, elapsedTimeSec * 1, 0);
+  // }
 
   renderer.render(scene, camera);
   lastRender = time;

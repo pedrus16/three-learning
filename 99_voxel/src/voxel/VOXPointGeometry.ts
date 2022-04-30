@@ -12,8 +12,6 @@ export class VOXPointGeometry extends BufferGeometry {
     const size = chunk.size;
     const palette = chunk.palette;
 
-    console.log(palette);
-
     const vertices = [];
     const colors = [];
 
