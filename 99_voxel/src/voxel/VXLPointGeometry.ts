@@ -1,24 +1,18 @@
 import { BufferGeometry, Float32BufferAttribute } from "three";
 
+import { Color, VXLLoader } from "./VXLLoader";
+
 
 export class VXLPointGeometry extends BufferGeometry {
-  constructor(chunk: {
-    data: Uint8Array;
-    size: { x: number; y: number; z: number };
-    palette: Array<{ r: number; g: number; b: number }>;
-    normalPalette: Array<{ x: number; y: number; z: number }>;
-    scale: number;
-    minBounds: { x: number; y: number; z: number };
-    maxBounds: { x: number; y: number; z: number };
-  }) {
+  constructor(
+    section: ReturnType<VXLLoader["parse"]>["sections"][number],
+    palette: Color[]
+  ) {
     super();
-    const data = chunk.data;
-    const size = chunk.size;
-    const palette = chunk.palette;
-    const normalPalette = chunk.normalPalette;
-    const scale = chunk.scale;
-    const minBounds = chunk.minBounds;
-    const maxBounds = chunk.maxBounds;
+    const data = section.data;
+    const normalPalette = section.normalPalette;
+    const scale = section.scale;
+    const minBounds = section.minBounds;
 
     const vertices = [];
     const colors = [];

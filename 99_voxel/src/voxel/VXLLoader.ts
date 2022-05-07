@@ -11,6 +11,16 @@ enum ValueType {
   Float32,
 }
 
+interface DataDescription {
+  label?: string;
+  type: ValueType | DataDescription[];
+  length?: number;
+  string?: boolean;
+}
+
+export type Vector3 = { x: number; y: number; z: number };
+export type Color = { r: number; g: number; b: number };
+
 const BYTE_SIZES = {
   [ValueType.Uint8]: 1,
   [ValueType.Int8]: 1,
@@ -21,16 +31,8 @@ const BYTE_SIZES = {
   [ValueType.Float32]: 4,
 };
 
-interface DataDescription {
-  label?: string;
-  type: ValueType | DataDescription[];
-  length?: number;
-  string?: boolean;
-}
-
 const MAIN_HEADER_SIZE_BYTE = 802;
 const SECTION_HEADER_SIZE_BYTE = 28;
-const SECTION_TAILER_SIZE_BYTE = 96;
 const LITTLE_ENDIAN = true;
 
 const TS_NORMALS = [
@@ -359,7 +361,7 @@ function getTypeSize(value: ValueType | DataDescription[]) {
   return BYTE_SIZES[value];
 }
 
-function parse<T extends { [key: string]: any }>(
+function parse<T extends { [key: string]: unknown }>(
   buffer: ArrayBuffer,
   dataDescription: DataDescription[],
   byteOffset = 0
@@ -412,6 +414,16 @@ function parse<T extends { [key: string]: any }>(
   return data as T;
 }
 
+type MainHeader = {
+  fileType: string;
+  numSections: number;
+  numberSectionsBis: number;
+  bodySize: number;
+  startPaletteRemap: number;
+  endPaletteRemap: number;
+  palette: number[];
+};
+
 function parseMainHeader(buffer: ArrayBuffer) {
   const headerStructure: DataDescription[] = [
     { label: "fileType", type: ValueType.Uint8, length: 16, string: true },
@@ -424,69 +436,29 @@ function parseMainHeader(buffer: ArrayBuffer) {
     { label: "palette", type: ValueType.Uint8, length: 256 * 3 },
   ];
 
-  return parse<{
-    fileType: string;
-    numSections: number;
-    numberSectionsBis: number;
-    bodySize: number;
-    startPaletteRemap: number;
-    endPaletteRemap: number;
-    palette: number[];
-  }>(buffer, headerStructure);
+  return parse<MainHeader>(buffer, headerStructure);
 }
 
-function parseSectionHeaders(buffer: ArrayBuffer, count: number) {
-  const headersStructure: DataDescription[] = [
-    {
-      label: "headers",
-      length: count,
-      type: [
-        {
-          label: "sectionName",
-          type: ValueType.Uint8,
-          length: 16,
-          string: true,
-        },
-        { label: "number", type: ValueType.Uint32 },
-        { type: ValueType.Uint32 },
-        { type: ValueType.Uint32 },
-      ],
-    },
-  ];
-
-  const parsed = parse<{
-    headers: Array<{
-      sectionName: string;
-      number: number;
-    }>;
-  }>(buffer, headersStructure, MAIN_HEADER_SIZE_BYTE);
-
-  return parsed.headers;
-}
-
-// TODO Handle multiple sections
-function parseSectionBodies(
+function parseSectionBody(
   buffer: ArrayBuffer,
-  tailers: Array<{
+  tailer: {
     spanStartOffset: number;
     spanDataOffset: number;
     sizeX: number;
     sizeY: number;
     sizeZ: number;
-  }>
+  },
+  byteOffset: number
 ) {
   const voxels: Array<{
-    position: { x: number; y: number; z: number };
+    position: Vector3;
     colour: number;
     normal: number;
   }> = [];
   const baseOffset =
-    MAIN_HEADER_SIZE_BYTE +
-    tailers.length * SECTION_HEADER_SIZE_BYTE +
-    tailers[0].spanStartOffset;
+    MAIN_HEADER_SIZE_BYTE + byteOffset + tailer.spanStartOffset;
 
-  // TODO get size from corresponding tailer to handle multiple sections
-  const nSpans = tailers[0].sizeX * tailers[0].sizeY;
+  const nSpans = tailer.sizeX * tailer.sizeY;
 
   const spansAddressesStructure: DataDescription[] = [
     {
@@ -521,13 +493,13 @@ function parseSectionBodies(
     offset = origOffset + spansAddresses.spanStart[i];
 
     let z = 0;
-    while (z < tailers[0].sizeZ) {
+    while (z < tailer.sizeZ) {
       const skip = dataView.getUint8(offset);
 
       offset += 1;
       z += skip;
 
-      if (z >= tailers[0].sizeZ) break;
+      if (z >= tailer.sizeZ) break;
 
       const numVoxels = dataView.getUint8(offset);
       offset += 1;
@@ -551,9 +523,9 @@ function parseSectionBodies(
       data.data.forEach((voxel, index) =>
         voxels.push({
           position: {
-            x: Math.floor(i / tailers[0].sizeX),
+            x: Math.floor(i / tailer.sizeX),
             y: z + index,
-            z: i % tailers[0].sizeX,
+            z: i % tailer.sizeX,
           },
           colour: voxel.colour,
           normal: voxel.normal,
@@ -577,6 +549,20 @@ function parseSectionBodies(
 
   return voxels;
 }
+
+type SectionTailer = {
+  spanStartOffset: number;
+  spanEndOffset: number;
+  spanDataOffset: number;
+  scale: number;
+  transformMatrix: number[];
+  minBound: number[];
+  maxBound: number[];
+  sizeX: number;
+  sizeY: number;
+  sizeZ: number;
+  normalType: number;
+};
 
 function parseSectionTailers(
   buffer: ArrayBuffer,
@@ -607,19 +593,7 @@ function parseSectionTailers(
   ];
 
   const parsed = parse<{
-    tailers: Array<{
-      spanStartOffset: number;
-      spanEndOffset: number;
-      spanDataOffset: number;
-      scale: number;
-      transformMatrix: number[];
-      minBound: number[];
-      maxBound: number[];
-      sizeX: number;
-      sizeY: number;
-      sizeZ: number;
-      normalType: number;
-    }>;
+    tailers: SectionTailer[];
   }>(
     buffer,
     tailersStructure,
@@ -629,15 +603,61 @@ function parseSectionTailers(
   return parsed.tailers;
 }
 
+function parseSections(buffer: ArrayBuffer, tailers: SectionTailer[]) {
+  return tailers.map((tailer, index) => {
+    const voxels = parseSectionBody(
+      buffer,
+      tailer,
+      tailers.length * SECTION_HEADER_SIZE_BYTE
+    );
+    const data = new Uint8Array(voxels.length * 5);
+    voxels.forEach((voxel, i) => {
+      if (voxel) {
+        const i5 = i * 5;
+        data[i5 + 0] = voxel.position.x;
+        data[i5 + 1] = voxel.position.y;
+        data[i5 + 2] = voxel.position.z;
+        data[i5 + 3] = voxel.colour;
+        data[i5 + 4] = voxel.normal;
+      }
+    });
+
+    return {
+      data,
+      size: {
+        x: tailer.sizeX,
+        y: tailer.sizeY,
+        z: tailer.sizeZ,
+      },
+      scale: tailer.scale,
+      minBounds: {
+        x: tailer.minBound[0],
+        y: tailer.minBound[1],
+        z: tailer.minBound[2],
+      },
+      maxBounds: {
+        x: tailer.maxBound[0],
+        y: tailer.maxBound[1],
+        z: tailer.maxBound[2],
+      },
+      normalPalette: tailer.normalType === 4 ? RA2_NORMALS : TS_NORMALS,
+    };
+  });
+}
+
+type Section = {
+  data: Uint8Array;
+  size: Vector3;
+  scale: number;
+  minBounds: Vector3;
+  maxBounds: Vector3;
+  normalPalette: Vector3[];
+};
+
 export class VXLLoader extends Loader {
   load(
     url: string,
-    onLoad: (data: {
-      data: Uint8Array;
-      palette: Array<{ r: number; g: number; b: number }>;
-      normalPalette: Array<{ x: number; y: number; z: number }>;
-      size: { x: number; y: number; z: number };
-    }) => void,
+    onLoad: (data: { sections: Section[]; palette: Color[] }) => void,
     onProgress?: () => void,
     onError?: (errorEvent: ErrorEvent) => void
   ) {
@@ -669,63 +689,23 @@ export class VXLLoader extends Loader {
 
   parse(buffer: ArrayBuffer) {
     const mainHeader = parseMainHeader(buffer);
-    const sectionHeaders = parseSectionHeaders(buffer, mainHeader.numSections);
     const sectionTailers = parseSectionTailers(
       buffer,
       mainHeader.numSections,
       mainHeader.bodySize
     );
-    const voxels = parseSectionBodies(buffer, sectionTailers);
 
-    const palette: Array<{ r: number; g: number; b: number }> = [];
-    for (let i = 0; i < mainHeader.palette.length; i += 3) {
+    const palette: Color[] = [];
+    for (let i = 0; i < mainHeader.palette.length; i += 3)
       palette.push({
         r: mainHeader.palette[i + 0],
         g: mainHeader.palette[i + 1],
         b: mainHeader.palette[i + 2],
       });
-    }
-
-    const size = {
-      x: sectionTailers[0].sizeX,
-      y: sectionTailers[0].sizeY,
-      z: sectionTailers[0].sizeZ,
-    };
-
-    const data = new Uint8Array(voxels.length * 5);
-    voxels.forEach((voxel, i) => {
-      if (voxel) {
-        const i5 = i * 5;
-        data[i5 + 0] = voxel.position.x;
-        data[i5 + 1] = voxel.position.y;
-        data[i5 + 2] = voxel.position.z;
-        data[i5 + 3] = voxel.colour;
-        data[i5 + 4] = voxel.normal;
-      }
-    });
-
-    const normalPalette =
-      sectionTailers[0].normalType === 4 ? RA2_NORMALS : TS_NORMALS;
-
-    const minBounds = {
-      x: sectionTailers[0].minBound[0],
-      y: sectionTailers[0].minBound[1],
-      z: sectionTailers[0].minBound[2],
-    };
-    const maxBounds = {
-      x: sectionTailers[0].maxBound[0],
-      y: sectionTailers[0].maxBound[1],
-      z: sectionTailers[0].maxBound[2],
-    };
 
     return {
-      data,
       palette,
-      normalPalette,
-      size,
-      scale: sectionTailers[0].scale,
-      minBounds,
-      maxBounds,
+      sections: parseSections(buffer, sectionTailers),
     };
   }
 }

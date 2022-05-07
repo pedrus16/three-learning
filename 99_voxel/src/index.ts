@@ -178,10 +178,12 @@ UNITS.forEach(({ parts }, index) => {
   scene.add(unitScene);
   parts.forEach((name) => {
     vxlLoader.load(`./assets/models/vxl/${name}.vxl`, (data) => {
-      const geometry = new VXLPointGeometry(data);
-      const mesh = new Points(geometry, voxelMaterial);
-      mesh.position.set(0, 0, 0);
-      unitScene.add(mesh);
+      data.sections.forEach((section) => {
+        const geometry = new VXLPointGeometry(section, data.palette);
+        const mesh = new Points(geometry, voxelMaterial);
+        mesh.position.set(0, 0, 0);
+        unitScene.add(mesh);
+      });
     });
   });
 });
