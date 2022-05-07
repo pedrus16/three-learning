@@ -24,6 +24,9 @@ module.exports = {
       ],
     }),
   ],
+  resolve: {
+    extensions: [".js", ".ts", ".json", ".wasm"],
+  },
   output: {
     filename: "main.js",
     path: path.resolve(__dirname, "dist"),
@@ -33,8 +36,8 @@ module.exports = {
     rules: [
       // Typescript
       {
-        test: /\.m?(js|ts)$/,
-        exclude: /(node_modules)/,
+        test: /\.m?(js|ts)x?$/,
+        exclude: /(node_modules|bower_components)/,
         use: {
           // `.swcrc` can be used to configure swc
           loader: "swc-loader",

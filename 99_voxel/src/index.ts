@@ -20,8 +20,8 @@ import fragment from "./shaders/volume/fragment.frag";
 import vertex from "./shaders/volume/vertex.vert";
 import voxelFragment from "./shaders/voxel/fragment.frag";
 import voxelVertex from "./shaders/voxel/vertex.vert";
-import { VXLLoader } from "./voxel/VXLLoader.ts";
-import { VXLPointGeometry } from "./voxel/VXLPointGeometry.ts";
+import { VXLLoader } from "./voxel/VXLLoader";
+import { VXLPointGeometry } from "./voxel/VXLPointGeometry";
 
 
 // Sizes
