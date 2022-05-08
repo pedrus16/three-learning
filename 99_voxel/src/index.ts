@@ -34,6 +34,7 @@ const canvas = document.querySelector<HTMLElement>("canvas.webgl");
 
 const settings = {
   envMapIntensity: 1.0,
+  teamColorHue: 45,
 };
 
 // Debug
@@ -49,9 +50,9 @@ const textureLoader = new TextureLoader();
 // Camera
 // const camera = new OrthographicCamera(-20, 20, -20, 20, 0.1, 1000);
 const camera = new PerspectiveCamera(60, size.width / size.height);
-camera.position.x = 0;
+camera.position.x = 10;
 camera.position.y = 10;
-camera.position.z = 0;
+camera.position.z = 10;
 scene.add(camera);
 
 // Voxel Loader
@@ -168,7 +169,7 @@ const UNITS = [
   // { parts: ["4tnk", "4tnktur", "4tnkbarl"] },
 ];
 
-const ROW_SIZE = 5;
+const ROW_SIZE = Math.floor(Math.sqrt(UNITS.length));
 const SPACING = 12;
 UNITS.forEach(({ parts }, index) => {
   const unitScene = new Scene();
@@ -181,7 +182,10 @@ UNITS.forEach(({ parts }, index) => {
   parts.forEach((name) => {
     vxlLoader.load(`./assets/models/vxl/${name}.vxl`, (data) => {
       data.sections.forEach((section) => {
-        const geometry = new VXLPointGeometry(section, data.palette);
+        const geometry = new VXLPointGeometry(section, data.palette, {
+          ...data.paletteRemap,
+          hue: settings.teamColorHue,
+        });
         const transformMatrix = section.transformMatrix;
         const matrix = new Matrix4();
         matrix.set(...transformMatrix, 0, 0, 0, 1);

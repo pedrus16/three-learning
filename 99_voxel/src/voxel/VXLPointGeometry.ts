@@ -3,10 +3,31 @@ import { BufferGeometry, Float32BufferAttribute } from "three";
 import { Color, VXLLoader } from "./VXLLoader";
 
 
+export function hueRotation(color: Color, hue: number) {
+  const U = Math.cos((hue * Math.PI) / 180);
+  const W = Math.sin((hue * Math.PI) / 180);
+
+  const ret = { r: 0, g: 0, b: 0 };
+  ret.r =
+    (0.299 + 0.701 * U + 0.168 * W) * color.r +
+    (0.587 - 0.587 * U + 0.33 * W) * color.g +
+    (0.114 - 0.114 * U - 0.497 * W) * color.b;
+  ret.g =
+    (0.299 - 0.299 * U - 0.328 * W) * color.r +
+    (0.587 + 0.413 * U + 0.035 * W) * color.g +
+    (0.114 - 0.114 * U + 0.292 * W) * color.b;
+  ret.b =
+    (0.299 - 0.3 * U + 1.25 * W) * color.r +
+    (0.587 - 0.588 * U - 1.05 * W) * color.g +
+    (0.114 + 0.886 * U - 0.203 * W) * color.b;
+  return ret;
+}
+
 export class VXLPointGeometry extends BufferGeometry {
   constructor(
     section: ReturnType<VXLLoader["parse"]>["sections"][number],
-    palette: Color[]
+    palette: Color[],
+    paletteRemap?: { start: number; end: number; hue: number }
   ) {
     super();
     const data = section.data;
@@ -28,7 +49,10 @@ export class VXLPointGeometry extends BufferGeometry {
 
       vertices.push(...[x, y, z]);
 
-      const { r, g, b } = palette[c];
+      const { r, g, b } =
+        paletteRemap && c >= paletteRemap.start && c <= paletteRemap.end
+          ? hueRotation(palette[c], paletteRemap.hue)
+          : palette[c];
 
       colors.push(...[r / 256, g / 256, b / 256]);
 

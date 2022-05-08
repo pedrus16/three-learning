@@ -684,7 +684,7 @@ type Section = {
 export class VXLLoader extends Loader {
   load(
     url: string,
-    onLoad: (data: { sections: Section[]; palette: Color[] }) => void,
+    onLoad: (data: ReturnType<VXLLoader["parse"]>) => void,
     onProgress?: () => void,
     onError?: (errorEvent: ErrorEvent) => void
   ) {
@@ -732,6 +732,10 @@ export class VXLLoader extends Loader {
 
     return {
       palette,
+      paletteRemap: {
+        start: mainHeader.startPaletteRemap,
+        end: mainHeader.endPaletteRemap,
+      },
       sections: parseSections(buffer, sectionTailers),
     };
   }
