@@ -20,6 +20,22 @@ interface DataDescription {
 
 export type Vector3 = { x: number; y: number; z: number };
 export type Color = { r: number; g: number; b: number };
+export type Matrix = [
+  number,
+  number,
+  number,
+  number,
+
+  number,
+  number,
+  number,
+  number,
+
+  number,
+  number,
+  number,
+  number
+];
 
 const BYTE_SIZES = {
   [ValueType.Uint8]: 1,
@@ -441,13 +457,7 @@ function parseMainHeader(buffer: ArrayBuffer) {
 
 function parseSectionBody(
   buffer: ArrayBuffer,
-  tailer: {
-    spanStartOffset: number;
-    spanDataOffset: number;
-    sizeX: number;
-    sizeY: number;
-    sizeZ: number;
-  },
+  tailer: SectionTailer,
   byteOffset: number
 ) {
   const voxels: Array<{
@@ -458,7 +468,7 @@ function parseSectionBody(
   const baseOffset =
     MAIN_HEADER_SIZE_BYTE + byteOffset + tailer.spanStartOffset;
 
-  const nSpans = tailer.sizeX * tailer.sizeY;
+  const nSpans = tailer.width * tailer.depth;
 
   const spansAddressesStructure: DataDescription[] = [
     {
@@ -492,14 +502,14 @@ function parseSectionBody(
 
     offset = origOffset + spansAddresses.spanStart[i];
 
-    let z = 0;
-    while (z < tailer.sizeZ) {
+    let y = 0;
+    while (y < tailer.height) {
       const skip = dataView.getUint8(offset);
 
       offset += 1;
-      z += skip;
+      y += skip;
 
-      if (z >= tailer.sizeZ) break;
+      if (y >= tailer.height) break;
 
       const numVoxels = dataView.getUint8(offset);
       offset += 1;
@@ -523,9 +533,9 @@ function parseSectionBody(
       data.data.forEach((voxel, index) =>
         voxels.push({
           position: {
-            x: Math.floor(i / tailer.sizeX),
-            y: z + index,
-            z: i % tailer.sizeX,
+            x: i % tailer.width,
+            y: y + index,
+            z: Math.floor(i / tailer.width),
           },
           colour: voxel.colour,
           normal: voxel.normal,
@@ -540,7 +550,7 @@ function parseSectionBody(
         );
       }
 
-      z += numVoxels;
+      y += numVoxels;
       offset += getTypeSize(voxelDataStructure);
     }
 
@@ -555,12 +565,12 @@ type SectionTailer = {
   spanEndOffset: number;
   spanDataOffset: number;
   scale: number;
-  transformMatrix: number[];
+  transformMatrix: Matrix;
   minBound: number[];
   maxBound: number[];
-  sizeX: number;
-  sizeY: number;
-  sizeZ: number;
+  width: number;
+  height: number;
+  depth: number;
   normalType: number;
 };
 
@@ -581,9 +591,9 @@ function parseSectionTailers(
         { label: "transformMatrix", type: ValueType.Float32, length: 12 },
         { label: "minBound", type: ValueType.Float32, length: 3 },
         { label: "maxBound", type: ValueType.Float32, length: 3 },
-        { label: "sizeX", type: ValueType.Uint8 },
-        { label: "sizeY", type: ValueType.Uint8 },
-        { label: "sizeZ", type: ValueType.Uint8 },
+        { label: "width", type: ValueType.Uint8 },
+        { label: "depth", type: ValueType.Uint8 },
+        { label: "height", type: ValueType.Uint8 },
         {
           label: "normalType",
           type: ValueType.Uint8,
@@ -625,22 +635,38 @@ function parseSections(buffer: ArrayBuffer, tailers: SectionTailer[]) {
     return {
       data,
       size: {
-        x: tailer.sizeX,
-        y: tailer.sizeY,
-        z: tailer.sizeZ,
+        x: tailer.width,
+        y: tailer.height,
+        z: tailer.depth,
       },
       scale: tailer.scale,
       minBounds: {
         x: tailer.minBound[0],
-        y: tailer.minBound[1],
-        z: tailer.minBound[2],
+        y: tailer.minBound[2], // Inverse Y and Z
+        z: tailer.minBound[1],
       },
       maxBounds: {
         x: tailer.maxBound[0],
-        y: tailer.maxBound[1],
-        z: tailer.maxBound[2],
+        y: tailer.maxBound[2], // Inverse Y and Z
+        z: tailer.maxBound[1],
       },
       normalPalette: tailer.normalType === 4 ? RA2_NORMALS : TS_NORMALS,
+      transformMatrix: [
+        tailer.transformMatrix[0],
+        tailer.transformMatrix[1] * tailer.scale,
+        tailer.transformMatrix[2] * tailer.scale,
+        tailer.transformMatrix[3] * tailer.scale,
+
+        tailer.transformMatrix[4] * tailer.scale,
+        tailer.transformMatrix[5],
+        tailer.transformMatrix[6] * tailer.scale,
+        tailer.transformMatrix[11] * tailer.scale, // Inverse Y and Z
+
+        tailer.transformMatrix[8] * tailer.scale,
+        tailer.transformMatrix[9] * tailer.scale,
+        tailer.transformMatrix[10],
+        tailer.transformMatrix[7] * tailer.scale, // Inverse Y and Z
+      ] as Matrix,
     };
   });
 }
@@ -652,6 +678,7 @@ type Section = {
   minBounds: Vector3;
   maxBounds: Vector3;
   normalPalette: Vector3[];
+  transformMatrix: Matrix;
 };
 
 export class VXLLoader extends Loader {

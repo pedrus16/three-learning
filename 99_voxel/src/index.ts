@@ -4,6 +4,7 @@ import { GUI } from "lil-gui";
 import Stats from "stats.js";
 import {
   DirectionalLight,
+  Matrix4,
   PCFShadowMap,
   PerspectiveCamera,
   Points,
@@ -48,9 +49,9 @@ const textureLoader = new TextureLoader();
 // Camera
 // const camera = new OrthographicCamera(-20, 20, -20, 20, 0.1, 1000);
 const camera = new PerspectiveCamera(60, size.width / size.height);
-camera.position.x = 10;
+camera.position.x = 0;
 camera.position.y = 10;
-camera.position.z = 10;
+camera.position.z = 0;
 scene.add(camera);
 
 // Voxel Loader
@@ -146,6 +147,7 @@ const UNITS = [
   { parts: ["mind"] },
   { parts: ["smin"] },
   { parts: ["tele", "teletur"] },
+  { parts: ["ytnk", "ytnktur"] },
 
   /* CIVILIANS */
   { parts: ["cona"] },
@@ -166,7 +168,7 @@ const UNITS = [
   // { parts: ["4tnk", "4tnktur", "4tnkbarl"] },
 ];
 
-const ROW_SIZE = 6;
+const ROW_SIZE = 5;
 const SPACING = 12;
 UNITS.forEach(({ parts }, index) => {
   const unitScene = new Scene();
@@ -180,6 +182,10 @@ UNITS.forEach(({ parts }, index) => {
     vxlLoader.load(`./assets/models/vxl/${name}.vxl`, (data) => {
       data.sections.forEach((section) => {
         const geometry = new VXLPointGeometry(section, data.palette);
+        const transformMatrix = section.transformMatrix;
+        const matrix = new Matrix4();
+        matrix.set(...transformMatrix, 0, 0, 0, 1);
+        geometry.applyMatrix4(matrix);
         const mesh = new Points(geometry, voxelMaterial);
         mesh.position.set(0, 0, 0);
         unitScene.add(mesh);

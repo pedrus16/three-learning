@@ -19,9 +19,9 @@ export class VXLPointGeometry extends BufferGeometry {
     const normals = [];
 
     for (let j = 0; j < data.length; j += 5) {
-      const x = (data[j + 0] + minBounds.y) * scale;
-      const y = (data[j + 1] + minBounds.z) * scale;
-      const z = (data[j + 2] + minBounds.x) * scale;
+      const x = (data[j + 0] + minBounds.x) * scale;
+      const y = (data[j + 1] + minBounds.y) * scale;
+      const z = (data[j + 2] + minBounds.z) * scale;
 
       const c = data[j + 3]; // color palette index
       const n = data[j + 4]; // normal palette index
