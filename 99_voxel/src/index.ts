@@ -4,6 +4,7 @@ import { GUI } from "lil-gui";
 import Stats from "stats.js";
 import {
   DirectionalLight,
+  InstancedBufferAttribute,
   Matrix4,
   PCFShadowMap,
   PerspectiveCamera,
@@ -22,7 +23,7 @@ import vertex from "./shaders/volume/vertex.vert";
 import voxelFragment from "./shaders/voxel/fragment.frag";
 import voxelVertex from "./shaders/voxel/vertex.vert";
 import { VXLLoader } from "./voxel/VXLLoader";
-import { VXLPointGeometry } from "./voxel/VXLPointGeometry";
+import { remapPalette, VXLPointGeometry } from "./voxel/VXLPointGeometry";
 
 
 // Sizes
@@ -34,7 +35,7 @@ const canvas = document.querySelector<HTMLElement>("canvas.webgl");
 
 const settings = {
   envMapIntensity: 1.0,
-  teamColorHue: 45,
+  teamColorHue: 250,
 };
 
 // Debug
@@ -54,60 +55,6 @@ camera.position.x = 10;
 camera.position.y = 10;
 camera.position.z = 10;
 scene.add(camera);
-
-// Voxel Loader
-// const voxLoader = new VOXLoader();
-// voxLoader.load("./assets/models/monu10.vox", function (chunks) {
-//   for (var i = 0; i < chunks.length; i++) {
-//     const chunk = chunks[i];
-
-//     const geometry = new BoxGeometry(1, 1, 1);
-//     const data = new VOXData3DTexture(chunk);
-//     const material = new ShaderMaterial({
-//       glslVersion: GLSL3,
-//       uniforms: {
-//         uMap: { value: data },
-//         uSize: {
-//           value: new Vector3(chunk.size.x, chunk.size.z, chunk.size.y),
-//         },
-//         uThreshold: { value: 0.8 },
-//         uResolutionMultiplier: { value: 4 },
-//         uNormalSampling: { value: 4 },
-//       },
-//       vertexShader: vertex,
-//       fragmentShader: fragment,
-//       side: BackSide,
-//     });
-
-//     const volumeMesh = new Mesh(geometry, material);
-//     scene.add(volumeMesh);
-
-//     const pointGeometry = new VOXPointGeometry(chunk);
-//     const pointMesh = new Points(
-//       pointGeometry,
-//       new PointsMaterial({
-//         size: 0.02,
-//         vertexColors: true,
-//         format: RGBAFormat,
-//       })
-//     );
-//     pointMesh.position.set(1, 0, 0);
-//     scene.add(pointMesh);
-//   }
-// });
-
-// VXL Loader
-const vxlLoader = new VXLLoader();
-
-const voxelMaterial = new ShaderMaterial({
-  vertexColors: true,
-  vertexShader: voxelVertex,
-  fragmentShader: voxelFragment,
-  uniforms: {
-    uSize: { value: 100.0 * renderer.getPixelRatio() },
-    uViewPos: { value: camera.position },
-  },
-});
 
 const UNITS = [
   /* SOVIET */
@@ -169,33 +116,132 @@ const UNITS = [
   // { parts: ["4tnk", "4tnktur", "4tnkbarl"] },
 ];
 
+// Voxel Loader
+// const voxLoader = new VOXLoader();
+// voxLoader.load("./assets/models/monu10.vox", function (chunks) {
+//   for (var i = 0; i < chunks.length; i++) {
+//     const chunk = chunks[i];
+
+//     const geometry = new BoxGeometry(1, 1, 1);
+//     const data = new VOXData3DTexture(chunk);
+//     const material = new ShaderMaterial({
+//       glslVersion: GLSL3,
+//       uniforms: {
+//         uMap: { value: data },
+//         uSize: {
+//           value: new Vector3(chunk.size.x, chunk.size.z, chunk.size.y),
+//         },
+//         uThreshold: { value: 0.8 },
+//         uResolutionMultiplier: { value: 4 },
+//         uNormalSampling: { value: 4 },
+//       },
+//       vertexShader: vertex,
+//       fragmentShader: fragment,
+//       side: BackSide,
+//     });
+
+//     const volumeMesh = new Mesh(geometry, material);
+//     scene.add(volumeMesh);
+
+//     const pointGeometry = new VOXPointGeometry(chunk);
+//     const pointMesh = new Points(
+//       pointGeometry,
+//       new PointsMaterial({
+//         size: 0.02,
+//         vertexColors: true,
+//         format: RGBAFormat,
+//       })
+//     );
+//     pointMesh.position.set(1, 0, 0);
+//     scene.add(pointMesh);
+//   }
+// });
+
+// VXL Loader
+const vxlLoader = new VXLLoader();
+
+const voxelMaterial = new ShaderMaterial({
+  vertexColors: true,
+  vertexShader: voxelVertex,
+  fragmentShader: voxelFragment,
+  uniforms: {
+    uSize: { value: 100.0 * renderer.getPixelRatio() },
+    uViewPos: { value: camera.position },
+  },
+  depthWrite: true,
+  depthTest: true,
+});
+
+const ZEPS = [];
+for (let i = 0; i < 100; i++) {
+  ZEPS.push({ parts: ["zep"] });
+}
+
 const ROW_SIZE = Math.floor(Math.sqrt(UNITS.length));
 const SPACING = 12;
-UNITS.forEach(({ parts }, index) => {
-  const unitScene = new Scene();
-  unitScene.position.set(
-    SPACING * ((index % ROW_SIZE) - ROW_SIZE * 0.5),
-    0,
-    (Math.floor(index / ROW_SIZE) - ROW_SIZE * 0.5) * SPACING
-  );
-  scene.add(unitScene);
-  parts.forEach((name) => {
-    vxlLoader.load(`./assets/models/vxl/${name}.vxl`, (data) => {
-      data.sections.forEach((section) => {
-        const geometry = new VXLPointGeometry(section, data.palette, {
-          ...data.paletteRemap,
-          hue: settings.teamColorHue,
-        });
-        const transformMatrix = section.transformMatrix;
-        const matrix = new Matrix4();
-        matrix.set(...transformMatrix, 0, 0, 0, 1);
-        geometry.applyMatrix4(matrix);
-        const mesh = new Points(geometry, voxelMaterial);
-        mesh.position.set(0, 0, 0);
-        unitScene.add(mesh);
-      });
-    });
+// UNITS.forEach(({ parts }, index) => {
+//   const unitScene = new Scene();
+//   unitScene.position.set(
+//     SPACING * ((index % ROW_SIZE) - ROW_SIZE * 0.5),
+//     0,
+//     (Math.floor(index / ROW_SIZE) - ROW_SIZE * 0.5) * SPACING
+//   );
+//   scene.add(unitScene);
+//   parts.forEach((name) => {
+//     vxlLoader.load(`./assets/models/vxl/${name}.vxl`, (data) => {
+//       data.sections.forEach((section) => {
+//         const geometry = new VXLPointGeometry(
+//           section,
+//           remapPalette(data.palette, data.paletteRemap, settings.teamColorHue)
+//         );
+//         const transformMatrix = section.transformMatrix;
+//         const matrix = new Matrix4();
+//         matrix.set(...transformMatrix, 0, 0, 0, 1);
+//         geometry.applyMatrix4(matrix);
+//         const mesh = new Points(geometry, voxelMaterial);
+//         mesh.position.set(0, 0, 0);
+//         unitScene.add(mesh);
+//       });
+//     });
+//   });
+// });
+
+const zepScene = new Scene();
+scene.add(zepScene);
+const ZEP_SPACING = { x: 12, y: 6, z: 6 };
+const ZEP_SIZE = 7;
+console.log(`Unit count: ${ZEP_SIZE * ZEP_SIZE * ZEP_SIZE}`);
+vxlLoader.load(`./assets/models/vxl/zep.vxl`, (data) => {
+  const geometries = [];
+  data.sections.forEach((section) => {
+    const geometry = new VXLPointGeometry(
+      section,
+      remapPalette(data.palette, data.paletteRemap, settings.teamColorHue)
+    );
+    const transformMatrix = section.transformMatrix;
+    const matrix = new Matrix4();
+    matrix.set(...transformMatrix, 0, 0, 0, 1);
+    geometry.applyMatrix4(matrix);
+    geometries.push(geometry);
   });
+
+  const offsets = new Float32Array(ZEP_SIZE * ZEP_SIZE * ZEP_SIZE * 3);
+  for (let i = 0; i < ZEP_SIZE * ZEP_SIZE * ZEP_SIZE; i++) {
+    const i3 = i * 3;
+    offsets[i3 + 0] =
+      ((Math.floor(i / ZEP_SIZE) % ZEP_SIZE) - ZEP_SIZE * 0.5) * ZEP_SPACING.x;
+    offsets[i3 + 1] = ((i % ZEP_SIZE) - ZEP_SIZE * 0.5) * ZEP_SPACING.y;
+    offsets[i3 + 2] =
+      (Math.floor(i / (ZEP_SIZE * ZEP_SIZE)) - ZEP_SIZE * 0.5) * ZEP_SPACING.z;
+  }
+  geometries.forEach((geometry) =>
+    geometry.setAttribute("aOffset", new InstancedBufferAttribute(offsets, 3))
+  );
+
+  const meshes = geometries.map(
+    (geometry) => new Points(geometry, voxelMaterial)
+  );
+  zepScene.add(...meshes);
 });
 
 // Directional Light

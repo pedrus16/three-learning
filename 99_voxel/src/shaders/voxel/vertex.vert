@@ -3,6 +3,7 @@ uniform float uSize;
 attribute float aScale;
 attribute vec3 aRandomness;
 attribute vec3 aNormal;
+attribute vec3 aOffset;
 
 varying vec2 vUv;
 varying vec3 vColor;
@@ -15,7 +16,8 @@ void main()
     /**
     * Position
     */
-    vec4 modelPosition = modelMatrix * vec4(position, 1.0);
+    vec3 instancedPosition = position + aOffset;
+    vec4 modelPosition = modelMatrix * vec4(instancedPosition, 1.0);
 
     vec4 viewPosition = viewMatrix * modelPosition;
     vec4 projectedPosition = projectionMatrix * viewPosition;
