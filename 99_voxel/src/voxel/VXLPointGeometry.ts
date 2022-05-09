@@ -23,11 +23,22 @@ export function hueRotation(color: Color, hue: number) {
   return ret;
 }
 
+export function remapPalette(
+  palette: Color[],
+  remapSection: { start: number; end: number },
+  hue: number
+) {
+  return palette.map((color, index) => {
+    return index >= remapSection.start && index <= remapSection.end
+      ? hueRotation(color, hue)
+      : color;
+  });
+}
+
 export class VXLPointGeometry extends BufferGeometry {
   constructor(
     section: ReturnType<VXLLoader["parse"]>["sections"][number],
-    palette: Color[],
-    paletteRemap?: { start: number; end: number; hue: number }
+    palette: Color[]
   ) {
     super();
     const data = section.data;
@@ -49,10 +60,7 @@ export class VXLPointGeometry extends BufferGeometry {
 
       vertices.push(...[x, y, z]);
 
-      const { r, g, b } =
-        paletteRemap && c >= paletteRemap.start && c <= paletteRemap.end
-          ? hueRotation(palette[c], paletteRemap.hue)
-          : palette[c];
+      const { r, g, b } = palette[c];
 
       colors.push(...[r / 256, g / 256, b / 256]);
 

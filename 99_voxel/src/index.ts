@@ -22,7 +22,7 @@ import vertex from "./shaders/volume/vertex.vert";
 import voxelFragment from "./shaders/voxel/fragment.frag";
 import voxelVertex from "./shaders/voxel/vertex.vert";
 import { VXLLoader } from "./voxel/VXLLoader";
-import { VXLPointGeometry } from "./voxel/VXLPointGeometry";
+import { remapPalette, VXLPointGeometry } from "./voxel/VXLPointGeometry";
 
 
 // Sizes
@@ -34,7 +34,7 @@ const canvas = document.querySelector<HTMLElement>("canvas.webgl");
 
 const settings = {
   envMapIntensity: 1.0,
-  teamColorHue: 45,
+  teamColorHue: 250,
 };
 
 // Debug
@@ -54,60 +54,6 @@ camera.position.x = 10;
 camera.position.y = 10;
 camera.position.z = 10;
 scene.add(camera);
-
-// Voxel Loader
-// const voxLoader = new VOXLoader();
-// voxLoader.load("./assets/models/monu10.vox", function (chunks) {
-//   for (var i = 0; i < chunks.length; i++) {
-//     const chunk = chunks[i];
-
-//     const geometry = new BoxGeometry(1, 1, 1);
-//     const data = new VOXData3DTexture(chunk);
-//     const material = new ShaderMaterial({
-//       glslVersion: GLSL3,
-//       uniforms: {
-//         uMap: { value: data },
-//         uSize: {
-//           value: new Vector3(chunk.size.x, chunk.size.z, chunk.size.y),
-//         },
-//         uThreshold: { value: 0.8 },
-//         uResolutionMultiplier: { value: 4 },
-//         uNormalSampling: { value: 4 },
-//       },
-//       vertexShader: vertex,
-//       fragmentShader: fragment,
-//       side: BackSide,
-//     });
-
-//     const volumeMesh = new Mesh(geometry, material);
-//     scene.add(volumeMesh);
-
-//     const pointGeometry = new VOXPointGeometry(chunk);
-//     const pointMesh = new Points(
-//       pointGeometry,
-//       new PointsMaterial({
-//         size: 0.02,
-//         vertexColors: true,
-//         format: RGBAFormat,
-//       })
-//     );
-//     pointMesh.position.set(1, 0, 0);
-//     scene.add(pointMesh);
-//   }
-// });
-
-// VXL Loader
-const vxlLoader = new VXLLoader();
-
-const voxelMaterial = new ShaderMaterial({
-  vertexColors: true,
-  vertexShader: voxelVertex,
-  fragmentShader: voxelFragment,
-  uniforms: {
-    uSize: { value: 100.0 * renderer.getPixelRatio() },
-    uViewPos: { value: camera.position },
-  },
-});
 
 const UNITS = [
   /* SOVIET */
@@ -169,6 +115,62 @@ const UNITS = [
   // { parts: ["4tnk", "4tnktur", "4tnkbarl"] },
 ];
 
+// Voxel Loader
+// const voxLoader = new VOXLoader();
+// voxLoader.load("./assets/models/monu10.vox", function (chunks) {
+//   for (var i = 0; i < chunks.length; i++) {
+//     const chunk = chunks[i];
+
+//     const geometry = new BoxGeometry(1, 1, 1);
+//     const data = new VOXData3DTexture(chunk);
+//     const material = new ShaderMaterial({
+//       glslVersion: GLSL3,
+//       uniforms: {
+//         uMap: { value: data },
+//         uSize: {
+//           value: new Vector3(chunk.size.x, chunk.size.z, chunk.size.y),
+//         },
+//         uThreshold: { value: 0.8 },
+//         uResolutionMultiplier: { value: 4 },
+//         uNormalSampling: { value: 4 },
+//       },
+//       vertexShader: vertex,
+//       fragmentShader: fragment,
+//       side: BackSide,
+//     });
+
+//     const volumeMesh = new Mesh(geometry, material);
+//     scene.add(volumeMesh);
+
+//     const pointGeometry = new VOXPointGeometry(chunk);
+//     const pointMesh = new Points(
+//       pointGeometry,
+//       new PointsMaterial({
+//         size: 0.02,
+//         vertexColors: true,
+//         format: RGBAFormat,
+//       })
+//     );
+//     pointMesh.position.set(1, 0, 0);
+//     scene.add(pointMesh);
+//   }
+// });
+
+// VXL Loader
+const vxlLoader = new VXLLoader();
+
+const voxelMaterial = new ShaderMaterial({
+  vertexColors: true,
+  vertexShader: voxelVertex,
+  fragmentShader: voxelFragment,
+  uniforms: {
+    uSize: { value: 100.0 * renderer.getPixelRatio() },
+    uViewPos: { value: camera.position },
+  },
+  depthWrite: true,
+  depthTest: true,
+});
+
 const ROW_SIZE = Math.floor(Math.sqrt(UNITS.length));
 const SPACING = 12;
 UNITS.forEach(({ parts }, index) => {
@@ -182,10 +184,10 @@ UNITS.forEach(({ parts }, index) => {
   parts.forEach((name) => {
     vxlLoader.load(`./assets/models/vxl/${name}.vxl`, (data) => {
       data.sections.forEach((section) => {
-        const geometry = new VXLPointGeometry(section, data.palette, {
-          ...data.paletteRemap,
-          hue: settings.teamColorHue,
-        });
+        const geometry = new VXLPointGeometry(
+          section,
+          remapPalette(data.palette, data.paletteRemap, settings.teamColorHue)
+        );
         const transformMatrix = section.transformMatrix;
         const matrix = new Matrix4();
         matrix.set(...transformMatrix, 0, 0, 0, 1);
