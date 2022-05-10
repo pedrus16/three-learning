@@ -3,8 +3,13 @@ precision highp sampler3D;
 
 in vec3 vOrigin;
 in vec3 vDirection;
+in mat4 vMatrix;
+
+uniform mat4 modelViewMatrix;
+uniform mat4 projectionMatrix;
 
 uniform sampler3D uMap;
+uniform sampler3D uNormal;
 uniform vec3 uSize;
 uniform float uThreshold;
 uniform float uResolutionMultiplier;
@@ -63,7 +68,7 @@ void main() {
     for ( float t = bounds.x; t < bounds.y; t += delta ) {
         float d = sample1( p + 0.5 );
         if ( d > uThreshold ) {
-            vec3 norm = normal( p + 0.5 );
+            vec3 norm = texture(uNormal, p + 0.5 ).xyz;
             color = texture(uMap, p + 0.5).rgba;
 
             /* Ambient Light */

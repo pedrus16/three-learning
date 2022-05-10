@@ -3,16 +3,19 @@ import "./style.css";
 import { GUI } from "lil-gui";
 import Stats from "stats.js";
 import {
+  BackSide,
+  BoxGeometry,
   DirectionalLight,
-  InstancedBufferAttribute,
-  Matrix4,
+  GLSL3,
+  InstancedMesh,
+  Object3D,
   PCFShadowMap,
   PerspectiveCamera,
-  Points,
   Scene,
   ShaderMaterial,
   sRGBEncoding,
   TextureLoader,
+  Vector3,
   WebGLRenderer
 } from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
@@ -22,8 +25,9 @@ import fragment from "./shaders/volume/fragment.frag";
 import vertex from "./shaders/volume/vertex.vert";
 import voxelFragment from "./shaders/voxel/fragment.frag";
 import voxelVertex from "./shaders/voxel/vertex.vert";
+import { VXLData3DTexture } from "./voxel/VXLData3DTexture";
 import { VXLLoader } from "./voxel/VXLLoader";
-import { remapPalette, VXLPointGeometry } from "./voxel/VXLPointGeometry";
+import { remapPalette } from "./voxel/VXLPointGeometry";
 
 
 // Sizes
@@ -35,7 +39,7 @@ const canvas = document.querySelector<HTMLElement>("canvas.webgl");
 
 const settings = {
   envMapIntensity: 1.0,
-  teamColorHue: 250,
+  teamColorHue: 0,
 };
 
 // Debug
@@ -51,9 +55,9 @@ const textureLoader = new TextureLoader();
 // Camera
 // const camera = new OrthographicCamera(-20, 20, -20, 20, 0.1, 1000);
 const camera = new PerspectiveCamera(60, size.width / size.height);
-camera.position.x = 10;
-camera.position.y = 10;
-camera.position.z = 10;
+camera.position.x = 20;
+camera.position.y = 20;
+camera.position.z = 20;
 scene.add(camera);
 
 const UNITS = [
@@ -208,40 +212,97 @@ const SPACING = 12;
 
 const zepScene = new Scene();
 scene.add(zepScene);
-const ZEP_SPACING = { x: 12, y: 6, z: 6 };
-const ZEP_SIZE = 7;
+const ZEP_SPACING = { x: 1, y: 1, z: 1 };
+const ZEP_SIZE = 20;
 console.log(`Unit count: ${ZEP_SIZE * ZEP_SIZE * ZEP_SIZE}`);
 vxlLoader.load(`./assets/models/vxl/zep.vxl`, (data) => {
-  const geometries = [];
+  const entities = [];
+  const meshes = [];
   data.sections.forEach((section) => {
-    const geometry = new VXLPointGeometry(
+    const texture = new VXLData3DTexture(
       section,
       remapPalette(data.palette, data.paletteRemap, settings.teamColorHue)
     );
-    const transformMatrix = section.transformMatrix;
-    const matrix = new Matrix4();
-    matrix.set(...transformMatrix, 0, 0, 0, 1);
-    geometry.applyMatrix4(matrix);
-    geometries.push(geometry);
+    const geometry = new BoxGeometry(1, 1, 1);
+    const material = new ShaderMaterial({
+      glslVersion: GLSL3,
+      uniforms: {
+        uMap: { value: texture },
+        uNormal: { value: texture.normal },
+        uSize: {
+          value: new Vector3(section.size.x, section.size.z, section.size.y),
+        },
+        uThreshold: { value: 0.8 },
+        uResolutionMultiplier: { value: 1 },
+        uNormalSampling: { value: 1 },
+      },
+      vertexShader: vertex,
+      fragmentShader: fragment,
+      side: BackSide,
+    });
+
+    meshes.push(
+      new InstancedMesh(geometry, material, ZEP_SIZE * ZEP_SIZE * ZEP_SIZE)
+    );
+
+    entities.push({ geometry, material });
   });
 
-  const offsets = new Float32Array(ZEP_SIZE * ZEP_SIZE * ZEP_SIZE * 3);
-  for (let i = 0; i < ZEP_SIZE * ZEP_SIZE * ZEP_SIZE; i++) {
-    const i3 = i * 3;
-    offsets[i3 + 0] =
-      ((Math.floor(i / ZEP_SIZE) % ZEP_SIZE) - ZEP_SIZE * 0.5) * ZEP_SPACING.x;
-    offsets[i3 + 1] = ((i % ZEP_SIZE) - ZEP_SIZE * 0.5) * ZEP_SPACING.y;
-    offsets[i3 + 2] =
-      (Math.floor(i / (ZEP_SIZE * ZEP_SIZE)) - ZEP_SIZE * 0.5) * ZEP_SPACING.z;
-  }
-  geometries.forEach((geometry) =>
-    geometry.setAttribute("aOffset", new InstancedBufferAttribute(offsets, 3))
-  );
+  const transform = new Object3D();
 
-  const meshes = geometries.map(
-    (geometry) => new Points(geometry, voxelMaterial)
-  );
-  zepScene.add(...meshes);
+  for (let i = 0; i < ZEP_SIZE * ZEP_SIZE * ZEP_SIZE; i++) {
+    transform.position.set(
+      ((Math.floor(i / ZEP_SIZE) % ZEP_SIZE) - ZEP_SIZE * 0.5) * ZEP_SPACING.x,
+      ((i % ZEP_SIZE) - ZEP_SIZE * 0.5) * ZEP_SPACING.y,
+
+      (Math.floor(i / (ZEP_SIZE * ZEP_SIZE)) - ZEP_SIZE * 0.5) * ZEP_SPACING.z
+    );
+    transform.rotation.x = Math.random() * Math.PI;
+    transform.rotation.y = Math.random() * Math.PI;
+    transform.rotation.z = Math.random() * Math.PI;
+    transform.updateMatrix();
+
+    meshes.forEach((mesh) => mesh.setMatrixAt(i, transform.matrix));
+  }
+
+  meshes.forEach((mesh) => zepScene.add(mesh));
+
+  // for (let i = 0; i < ZEP_SIZE * ZEP_SIZE * ZEP_SIZE; i++) {
+  //   entities.forEach(({ geometry, material }) => {
+  //     const mesh = new Mesh(geometry, material);
+  //     mesh.rotation.set(
+  //       Math.random() * Math.PI * 2,
+  //       Math.random() * Math.PI * 2,
+  //       Math.random() * Math.PI * 2
+  //     );
+  //     mesh.position.set(
+  //       ((Math.floor(i / ZEP_SIZE) % ZEP_SIZE) - ZEP_SIZE * 0.5) *
+  //         ZEP_SPACING.x,
+  //       ((i % ZEP_SIZE) - ZEP_SIZE * 0.5) * ZEP_SPACING.y,
+
+  //       (Math.floor(i / (ZEP_SIZE * ZEP_SIZE)) - ZEP_SIZE * 0.5) * ZEP_SPACING.z
+  //     );
+  //     zepScene.add(mesh);
+  //   });
+  // }
+
+  // const offsets = new Float32Array(ZEP_SIZE * ZEP_SIZE * ZEP_SIZE * 3);
+  // for (let i = 0; i < ZEP_SIZE * ZEP_SIZE * ZEP_SIZE; i++) {
+  //   const i3 = i * 3;
+  //   offsets[i3 + 0] =
+  //     ((Math.floor(i / ZEP_SIZE) % ZEP_SIZE) - ZEP_SIZE * 0.5) * ZEP_SPACING.x;
+  //   offsets[i3 + 1] = ((i % ZEP_SIZE) - ZEP_SIZE * 0.5) * ZEP_SPACING.y;
+  //   offsets[i3 + 2] =
+  //     (Math.floor(i / (ZEP_SIZE * ZEP_SIZE)) - ZEP_SIZE * 0.5) * ZEP_SPACING.z;
+  // }
+  // geometries.forEach((geometry) =>
+  //   geometry.setAttribute("aOffset", new InstancedBufferAttribute(offsets, 3))
+  // );
+
+  // const meshes = geometries.map(
+  //   (geometry) => new Points(geometry, voxelMaterial)
+  // );
+  // zepScene.add(...meshes);
 });
 
 // Directional Light
@@ -254,7 +315,7 @@ directionalLight.position.set(0.25, 2, -2.25);
 scene.add(directionalLight);
 
 const controls = new OrbitControls(camera, canvas);
-controls.enableDamping = true;
+// controls.enableDamping = true;
 
 // Renderer
 renderer.setSize(size.width, size.height);
