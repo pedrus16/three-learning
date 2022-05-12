@@ -215,9 +215,9 @@ const SPACING = 12;
 const zepScene = new Scene();
 scene.add(zepScene);
 const ZEP_SPACING = { x: 1, y: 1, z: 1 };
-const ZEP_SIZE = 2;
+const ZEP_SIZE = 30;
 console.log(`Unit count: ${ZEP_SIZE * ZEP_SIZE * ZEP_SIZE}`);
-vxlLoader.load(`./assets/models/vxl/rtnk.vxl`, (data) => {
+vxlLoader.load(`./assets/models/vxl/sam.vxl`, (data) => {
   const entities = [];
   const meshes = [];
   data.sections.forEach((section) => {

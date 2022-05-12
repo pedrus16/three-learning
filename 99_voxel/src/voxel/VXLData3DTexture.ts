@@ -16,10 +16,8 @@ export class VXLData3DTexture extends Data3DTexture {
     const minBounds = section.minBounds;
     const size = section.size;
 
-    console.log(size);
-
     const offsety = size.x;
-    const offsetz = size.x * size.y;
+    const offsetx = size.x * size.y;
 
     const array = new Uint8Array(size.x * size.y * size.z * 4);
 
@@ -33,7 +31,7 @@ export class VXLData3DTexture extends Data3DTexture {
       const c = data[j + 3]; // color palette index
       const n = data[j + 4]; // normal palette index
 
-      const index = x + y * offsety + z * offsetz;
+      const index = x * offsetx + y * offsety + z;
 
       const { r, g, b } = palette[c];
 
