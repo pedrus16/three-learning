@@ -3,6 +3,7 @@ import "./style.css";
 import { GUI } from "lil-gui";
 import Stats from "stats.js";
 import {
+  AxesHelper,
   BackSide,
   BoxGeometry,
   DirectionalLight,
@@ -40,6 +41,7 @@ const canvas = document.querySelector<HTMLElement>("canvas.webgl");
 const settings = {
   envMapIntensity: 1.0,
   teamColorHue: 0,
+  resolution: 1,
 };
 
 // Debug
@@ -55,9 +57,9 @@ const textureLoader = new TextureLoader();
 // Camera
 // const camera = new OrthographicCamera(-20, 20, -20, 20, 0.1, 1000);
 const camera = new PerspectiveCamera(60, size.width / size.height);
-camera.position.x = 20;
-camera.position.y = 20;
-camera.position.z = 20;
+camera.position.x = 0;
+camera.position.y = 10;
+camera.position.z = 0;
 scene.add(camera);
 
 const UNITS = [
@@ -213,9 +215,9 @@ const SPACING = 12;
 const zepScene = new Scene();
 scene.add(zepScene);
 const ZEP_SPACING = { x: 1, y: 1, z: 1 };
-const ZEP_SIZE = 20;
+const ZEP_SIZE = 2;
 console.log(`Unit count: ${ZEP_SIZE * ZEP_SIZE * ZEP_SIZE}`);
-vxlLoader.load(`./assets/models/vxl/zep.vxl`, (data) => {
+vxlLoader.load(`./assets/models/vxl/rtnk.vxl`, (data) => {
   const entities = [];
   const meshes = [];
   data.sections.forEach((section) => {
@@ -230,16 +232,25 @@ vxlLoader.load(`./assets/models/vxl/zep.vxl`, (data) => {
         uMap: { value: texture },
         uNormal: { value: texture.normal },
         uSize: {
-          value: new Vector3(section.size.x, section.size.z, section.size.y),
+          value: new Vector3(section.size.x, section.size.y, section.size.z),
         },
         uThreshold: { value: 0.8 },
         uResolutionMultiplier: { value: 1 },
-        uNormalSampling: { value: 1 },
       },
       vertexShader: vertex,
       fragmentShader: fragment,
       side: BackSide,
     });
+
+    gui
+      .add(settings, "resolution")
+      .min(0.01)
+      .max(16)
+      .step(0.05)
+      .onChange(
+        (resolution) =>
+          (material.uniforms.uResolutionMultiplier.value = resolution)
+      );
 
     meshes.push(
       new InstancedMesh(geometry, material, ZEP_SIZE * ZEP_SIZE * ZEP_SIZE)
@@ -257,9 +268,9 @@ vxlLoader.load(`./assets/models/vxl/zep.vxl`, (data) => {
 
       (Math.floor(i / (ZEP_SIZE * ZEP_SIZE)) - ZEP_SIZE * 0.5) * ZEP_SPACING.z
     );
-    transform.rotation.x = Math.random() * Math.PI;
-    transform.rotation.y = Math.random() * Math.PI;
-    transform.rotation.z = Math.random() * Math.PI;
+    // transform.rotation.x = Math.random() * Math.PI;
+    // transform.rotation.y = Math.random() * Math.PI;
+    // transform.rotation.z = Math.random() * Math.PI;
     transform.updateMatrix();
 
     meshes.forEach((mesh) => mesh.setMatrixAt(i, transform.matrix));
@@ -314,8 +325,11 @@ directionalLight.shadow.normalBias = 0.05;
 directionalLight.position.set(0.25, 2, -2.25);
 scene.add(directionalLight);
 
+const axesHelper = new AxesHelper(5);
+scene.add(axesHelper);
+
 const controls = new OrbitControls(camera, canvas);
-// controls.enableDamping = true;
+controls.enableDamping = true;
 
 // Renderer
 renderer.setSize(size.width, size.height);

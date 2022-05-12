@@ -16,8 +16,10 @@ export class VXLData3DTexture extends Data3DTexture {
     const minBounds = section.minBounds;
     const size = section.size;
 
+    console.log(size);
+
     const offsety = size.x;
-    const offsetz = size.x * size.z;
+    const offsetz = size.x * size.y;
 
     const array = new Uint8Array(size.x * size.y * size.z * 4);
 
@@ -25,7 +27,7 @@ export class VXLData3DTexture extends Data3DTexture {
 
     for (let j = 0; j < data.length; j += 5) {
       const x = data[j + 0];
-      const y = data[j + 1]; // Y and Z are reverted
+      const y = data[j + 1];
       const z = data[j + 2];
 
       const c = data[j + 3]; // color palette index
@@ -45,12 +47,12 @@ export class VXLData3DTexture extends Data3DTexture {
       normalArray[i4 + 0] = (normal.x * 0.5 + 0.5) * 255;
       normalArray[i4 + 1] = (normal.y * 0.5 + 0.5) * 255;
       normalArray[i4 + 2] = (normal.z * 0.5 + 0.5) * 255;
-      normalArray[i4 + 2] = 255;
+      normalArray[i4 + 3] = 255;
     }
 
-    super(array, size.x, size.z, size.y);
+    super(array, size.x, size.y, size.z);
 
-    this.normal = new Data3DTexture(normalArray, size.x, size.z, size.y);
+    this.normal = new Data3DTexture(normalArray, size.x, size.y, size.z);
     this.normal.format = RGBAFormat;
     this.normal.minFilter = NearestFilter;
     this.normal.magFilter = NearestFilter;

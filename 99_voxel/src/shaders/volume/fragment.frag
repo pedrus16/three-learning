@@ -3,17 +3,17 @@ precision highp sampler3D;
 
 in vec3 vOrigin;
 in vec3 vDirection;
-in mat4 vMatrix;
+in mat4 vInverseInstanceMatrix;
 
 uniform mat4 modelViewMatrix;
 uniform mat4 projectionMatrix;
+uniform mat3 normalMatrix;
 
 uniform sampler3D uMap;
 uniform sampler3D uNormal;
 uniform vec3 uSize;
 uniform float uThreshold;
 uniform float uResolutionMultiplier;
-uniform float uNormalSampling;
 
 out vec4 color;
 
@@ -32,26 +32,10 @@ vec2 hitBox( vec3 orig, vec3 dir ) {
 }
 
 float sample1( vec3 p ) {
-    float maxSize = max(uSize.x, max(uSize.y, uSize.z));
-    vec3 scale = vec3(uSize.x / maxSize, uSize.y / maxSize, uSize.z / maxSize);
     return texture(uMap, p).a;
 }
 
 #define epsilon .0001
-
-vec3 normal( vec3 coord ) {
-    if ( coord.x < epsilon ) return vec3( -1.0, 0.0, 0.0 );
-    if ( coord.y < epsilon ) return vec3( 0.0, -1.0, 0.0 );
-    if ( coord.z < epsilon ) return vec3( 0.0, 0.0, -1.0 );
-    if ( coord.x > 1.0 - epsilon ) return vec3( 1.0, 0.0, 0.0 );
-    if ( coord.y > 1.0 - epsilon ) return vec3( 0.0, 1.0, 0.0 );
-    if ( coord.z > 1.0 - epsilon ) return vec3( 0.0, 0.0, 1.0 );
-    vec3 step = 1.0 / uSize / uNormalSampling;
-    float x = sample1( coord + vec3( - step.x, 0.0, 0.0 ) ) - sample1( coord + vec3( step.x, 0.0, 0.0 ) );
-    float y = sample1( coord + vec3( 0.0, - step.y, 0.0 ) ) - sample1( coord + vec3( 0.0, step.y, 0.0 ) );
-    float z = sample1( coord + vec3( 0.0, 0.0, - step.z ) ) - sample1( coord + vec3( 0.0, 0.0, step.z ) );
-    return normalize( vec3( x, y, z ) );
-}
 
 void main() {
     float maxSize = max(uSize.x, max(uSize.y, uSize.z));
@@ -68,7 +52,11 @@ void main() {
     for ( float t = bounds.x; t < bounds.y; t += delta ) {
         float d = sample1( p + 0.5 );
         if ( d > uThreshold ) {
-            vec3 norm = texture(uNormal, p + 0.5 ).xyz;
+            /* Normal */
+            vec3 normal = texture(uNormal, p + 0.5 ).xyz;
+            normal = normal * 2.0 - 1.0;
+            normal = normalize(vec3(vec4(normal, 0.0) * vInverseInstanceMatrix));
+
             color = texture(uMap, p + 0.5).rgba;
 
             /* Ambient Light */
@@ -76,12 +64,16 @@ void main() {
             vec3 ambient = ambientStrength * color.rgb;
 
             /* Directional Light */
-            vec3 lightColor = vec3(1.0, 1.0, 1.0);
-            vec3 directionLight = normalize(vec3(-1.0, 1.0, 1.0));
-            float diff = max(dot(norm, directionLight), 0.0);
+            vec3 lightColor = vec3(2.0);
+            vec3 directionLight = normalize(vec3(1.0, 1.0, 1.0));
+            float diff = max(dot(normal, directionLight), 0.0);
             vec3 diffuse = diff * lightColor;
 
             color = vec4((ambient + diffuse) * color.rgb, 1.0);
+
+            /* DEBUG NORMAL */
+            // color = vec4(normal, 1.0);
+            // color = color * vec4(1.0, 1.0, 1.0, 1.0);
 
             break;
         }
