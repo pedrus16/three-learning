@@ -641,21 +641,21 @@ function parseSections(buffer: ArrayBuffer, tailers: SectionTailer[]) {
       },
       scale: tailer.scale,
       minBounds: {
-        x: tailer.minBound[0],
+        x: tailer.minBound[1], // Inverse X and Z
         y: tailer.minBound[2], // Inverse Y and Z
-        z: tailer.minBound[1],
+        z: tailer.minBound[0],
       },
       maxBounds: {
-        x: tailer.maxBound[0],
+        x: tailer.maxBound[1], // Inverse X and Z
         y: tailer.maxBound[2], // Inverse Y and Z
-        z: tailer.maxBound[1],
+        z: tailer.maxBound[0],
       },
       normalPalette: tailer.normalType === 4 ? RA2_NORMALS : TS_NORMALS,
       transformMatrix: [
         tailer.transformMatrix[0],
         tailer.transformMatrix[1] * tailer.scale,
         tailer.transformMatrix[2] * tailer.scale,
-        tailer.transformMatrix[3] * tailer.scale,
+        tailer.transformMatrix[7] * tailer.scale, // Inverse X and Z
 
         tailer.transformMatrix[4] * tailer.scale,
         tailer.transformMatrix[5],
@@ -665,7 +665,7 @@ function parseSections(buffer: ArrayBuffer, tailers: SectionTailer[]) {
         tailer.transformMatrix[8] * tailer.scale,
         tailer.transformMatrix[9] * tailer.scale,
         tailer.transformMatrix[10],
-        tailer.transformMatrix[7] * tailer.scale, // Inverse Y and Z
+        tailer.transformMatrix[3] * tailer.scale, // Inverse Y and Z
       ] as Matrix,
     };
   });

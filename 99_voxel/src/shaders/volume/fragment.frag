@@ -4,6 +4,7 @@ precision highp sampler3D;
 in vec3 vOrigin;
 in vec3 vDirection;
 in mat4 vInverseInstanceMatrix;
+in vec3 vFragPos;
 
 uniform mat4 modelViewMatrix;
 uniform mat4 projectionMatrix;
@@ -14,6 +15,7 @@ uniform sampler3D uNormal;
 uniform vec3 uSize;
 uniform float uThreshold;
 uniform float uResolutionMultiplier;
+uniform vec3 uViewPos;
 
 out vec4 color;
 
@@ -60,16 +62,26 @@ void main() {
             color = texture(uMap, p + 0.5).rgba;
 
             /* Ambient Light */
-            float ambientStrength = 0.25;
+            float ambientStrength = 0.5;
             vec3 ambient = ambientStrength * color.rgb;
 
             /* Directional Light */
-            vec3 lightColor = vec3(1.0);
+            vec3 lightColor = vec3(1.5);
             vec3 directionLight = normalize(vec3(1.0, 1.0, 1.0));
             float diff = max(dot(normal, directionLight), 0.0);
             vec3 diffuse = diff * lightColor;
 
-            color = vec4((ambient + diffuse) * color.rgb, 1.0);
+            /* Specular Light */
+            float specularStrength = 1.0;
+            vec3 viewDir = normalize(uViewPos - vFragPos);
+            vec3 reflectDir = reflect(-directionLight, normal);  
+            float spec = pow(max(dot(viewDir, reflectDir), 0.0), 4.0);
+            vec3 specular = specularStrength * spec * lightColor;  
+
+            color = vec4((ambient + diffuse + specular) * color.rgb, 1.0);
+
+            /* DEBUG SPEC */
+            // color = vec4(vec3(spec), 1.0);
 
             /* DEBUG NORMAL */
             // color = vec4(normal, 1.0);

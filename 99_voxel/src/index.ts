@@ -3,13 +3,12 @@ import "./style.css";
 import { GUI } from "lil-gui";
 import Stats from "stats.js";
 import {
-  AxesHelper,
   BackSide,
   BoxGeometry,
   DirectionalLight,
   GLSL3,
   InstancedMesh,
-  Object3D,
+  Matrix4,
   PCFShadowMap,
   PerspectiveCamera,
   Scene,
@@ -57,9 +56,9 @@ const textureLoader = new TextureLoader();
 // Camera
 // const camera = new OrthographicCamera(-20, 20, -20, 20, 0.1, 1000);
 const camera = new PerspectiveCamera(60, size.width / size.height);
-camera.position.x = 0;
+camera.position.x = 10;
 camera.position.y = 10;
-camera.position.z = 0;
+camera.position.z = 10;
 scene.add(camera);
 
 const UNITS = [
@@ -178,143 +177,272 @@ const voxelMaterial = new ShaderMaterial({
   depthTest: true,
 });
 
-const ZEPS = [];
-for (let i = 0; i < 100; i++) {
-  ZEPS.push({ parts: ["zep"] });
-}
-
 const ROW_SIZE = Math.floor(Math.sqrt(UNITS.length));
 const SPACING = 12;
-// UNITS.forEach(({ parts }, index) => {
-//   const unitScene = new Scene();
-//   unitScene.position.set(
-//     SPACING * ((index % ROW_SIZE) - ROW_SIZE * 0.5),
-//     0,
-//     (Math.floor(index / ROW_SIZE) - ROW_SIZE * 0.5) * SPACING
-//   );
-//   scene.add(unitScene);
-//   parts.forEach((name) => {
-//     vxlLoader.load(`./assets/models/vxl/${name}.vxl`, (data) => {
-//       data.sections.forEach((section) => {
-//         const geometry = new VXLPointGeometry(
-//           section,
-//           remapPalette(data.palette, data.paletteRemap, settings.teamColorHue)
-//         );
-//         const transformMatrix = section.transformMatrix;
-//         const matrix = new Matrix4();
-//         matrix.set(...transformMatrix, 0, 0, 0, 1);
-//         geometry.applyMatrix4(matrix);
-//         const mesh = new Points(geometry, voxelMaterial);
-//         mesh.position.set(0, 0, 0);
-//         unitScene.add(mesh);
+const materials = [];
+UNITS.forEach(({ parts }, index) => {
+  const unitScene = new Scene();
+  unitScene.position.set(
+    SPACING * ((index % ROW_SIZE) - ROW_SIZE * 0.5),
+    0,
+    (Math.floor(index / ROW_SIZE) - ROW_SIZE * 0.5) * SPACING
+  );
+  scene.add(unitScene);
+  parts.forEach((name) => {
+    vxlLoader.load(`./assets/models/vxl/${name}.vxl`, (data) => {
+      data.sections.forEach((section) => {
+        const texture = new VXLData3DTexture(
+          section,
+          remapPalette(data.palette, data.paletteRemap, settings.teamColorHue)
+        );
+        const geometry = new BoxGeometry(1, 1, 1);
+        const material = new ShaderMaterial({
+          glslVersion: GLSL3,
+          uniforms: {
+            uMap: { value: texture },
+            uNormal: { value: texture.normal },
+            uSize: {
+              value: new Vector3(
+                section.size.x,
+                section.size.y,
+                section.size.z
+              ),
+            },
+            uViewPos: { value: camera.position },
+            uThreshold: { value: 0.8 },
+            uResolutionMultiplier: { value: 1 },
+          },
+          vertexShader: vertex,
+          fragmentShader: fragment,
+          side: BackSide,
+        });
+        materials.push(material);
+        const transformMatrix = section.transformMatrix;
+        const matrix = new Matrix4();
+        matrix.set(...transformMatrix, 0, 0, 0, 1);
+        const maxSize = Math.max(
+          section.size.x,
+          section.size.y,
+          section.size.z
+        );
+        const mesh = new InstancedMesh(geometry, material, 1);
+        mesh.setMatrixAt(0, matrix);
+        mesh.scale.set(
+          maxSize * section.scale,
+          maxSize * section.scale,
+          maxSize * section.scale
+        );
+        mesh.position.set(
+          (section.size.x * 0.5 + section.minBounds.x) * section.scale,
+          (section.size.y * 0.5 + section.minBounds.y) * section.scale, //section.minBounds.y * section.scale,
+          (section.size.z * 0.5 + section.minBounds.z) * section.scale
+        );
+        unitScene.add(mesh);
+
+        /* BOUNDS DEBUG */
+        // unitScene.add(
+        //   new Mesh(
+        //     new BoxGeometry(
+        //       section.size.x * section.scale,
+        //       section.size.y * section.scale,
+        //       section.size.z * section.scale
+        //     ),
+        //     new MeshBasicMaterial({ wireframe: true, color: 0xff00ff })
+        //   )
+        // );
+      });
+    });
+  });
+});
+
+// const unitParts = ["mtnk", "mtnkbarl", "mtnktur"];
+// const unitScene = new Scene();
+// scene.add(unitScene);
+// unitParts.forEach((name) => {
+//   vxlLoader.load(`./assets/models/vxl/${name}.vxl`, (data) => {
+//     data.sections.forEach((section) => {
+//       const texture = new VXLData3DTexture(
+//         section,
+//         remapPalette(data.palette, data.paletteRemap, settings.teamColorHue)
+//       );
+//       const geometry = new BoxGeometry(1, 1, 1);
+//       const material = new ShaderMaterial({
+//         glslVersion: GLSL3,
+//         uniforms: {
+//           uMap: { value: texture },
+//           uNormal: { value: texture.normal },
+//           uSize: {
+//             value: new Vector3(section.size.x, section.size.y, section.size.z),
+//           },
+//           uThreshold: { value: 0.8 },
+//           uResolutionMultiplier: { value: 1 },
+//         },
+//         vertexShader: vertex,
+//         fragmentShader: fragment,
+//         side: BackSide,
 //       });
+//       const transformMatrix = section.transformMatrix;
+//       const matrix = new Matrix4();
+//       matrix.set(...transformMatrix, 0, 0, 0, 1);
+//       const maxSize = Math.max(section.size.x, section.size.y, section.size.z);
+//       const mesh = new InstancedMesh(geometry, material, 1);
+//       mesh.setMatrixAt(0, matrix);
+//       mesh.scale.set(
+//         maxSize * section.scale,
+//         maxSize * section.scale,
+//         maxSize * section.scale
+//       );
+//       mesh.position.set(
+//         (section.size.x * 0.5 + section.minBounds.x) * section.scale,
+//         (section.size.y * 0.5 + section.minBounds.y) * section.scale, //section.minBounds.y * section.scale,
+//         (section.size.z * 0.5 + section.minBounds.z) * section.scale
+//       );
+//       unitScene.add(mesh);
+
+//       /* BOUNDS DEBUG */
+//       // unitScene.add(
+//       //   new Mesh(
+//       //     new BoxGeometry(
+//       //       section.size.x * section.scale,
+//       //       section.size.y * section.scale,
+//       //       section.size.z * section.scale
+//       //     ),
+//       //     new MeshBasicMaterial({ wireframe: true, color: 0xff00ff })
+//       //   )
+//       // );
 //     });
 //   });
 // });
 
-const zepScene = new Scene();
-scene.add(zepScene);
-const ZEP_SPACING = { x: 1, y: 1, z: 1 };
-const ZEP_SIZE = 30;
-console.log(`Unit count: ${ZEP_SIZE * ZEP_SIZE * ZEP_SIZE}`);
-vxlLoader.load(`./assets/models/vxl/sam.vxl`, (data) => {
-  const entities = [];
-  const meshes = [];
-  data.sections.forEach((section) => {
-    const texture = new VXLData3DTexture(
-      section,
-      remapPalette(data.palette, data.paletteRemap, settings.teamColorHue)
-    );
-    const geometry = new BoxGeometry(1, 1, 1);
-    const material = new ShaderMaterial({
-      glslVersion: GLSL3,
-      uniforms: {
-        uMap: { value: texture },
-        uNormal: { value: texture.normal },
-        uSize: {
-          value: new Vector3(section.size.x, section.size.y, section.size.z),
-        },
-        uThreshold: { value: 0.8 },
-        uResolutionMultiplier: { value: 1 },
-      },
-      vertexShader: vertex,
-      fragmentShader: fragment,
-      side: BackSide,
-    });
+// vxlLoader.load(`./assets/models/vxl/sam.vxl`, (data) => {
+//   const entities = [];
+//   const meshes = [];
+//   data.sections.forEach((section) => {
+//     const texture = new VXLData3DTexture(
+//       section,
+//       remapPalette(data.palette, data.paletteRemap, settings.teamColorHue)
+//     );
+//     const geometry = new BoxGeometry(1, 1, 1);
+//     const material = new ShaderMaterial({
+//       glslVersion: GLSL3,
+//       uniforms: {
+//         uMap: { value: texture },
+//         uNormal: { value: texture.normal },
+//         uSize: {
+//           value: new Vector3(section.size.x, section.size.y, section.size.z),
+//         },
+//         uThreshold: { value: 0.8 },
+//         uResolutionMultiplier: { value: 1 },
+//       },
+//       vertexShader: vertex,
+//       fragmentShader: fragment,
+//       side: BackSide,
+//     });
 
-    gui
-      .add(settings, "resolution")
-      .min(0.01)
-      .max(16)
-      .step(0.05)
-      .onChange(
-        (resolution) =>
-          (material.uniforms.uResolutionMultiplier.value = resolution)
-      );
+//     gui
+//       .add(settings, "resolution")
+//       .min(0.01)
+//       .max(16)
+//       .step(0.05)
+//       .onChange(
+//         (resolution) =>
+//           (material.uniforms.uResolutionMultiplier.value = resolution)
+//       );
 
-    meshes.push(
-      new InstancedMesh(geometry, material, ZEP_SIZE * ZEP_SIZE * ZEP_SIZE)
-    );
+//     meshes.push(
+//       new InstancedMesh(geometry, material, ZEP_SIZE * ZEP_SIZE * ZEP_SIZE)
+//     );
 
-    entities.push({ geometry, material });
-  });
+//     entities.push({ geometry, material });
+//   });
 
-  const transform = new Object3D();
+//   const transform = new Object3D();
 
-  for (let i = 0; i < ZEP_SIZE * ZEP_SIZE * ZEP_SIZE; i++) {
-    transform.position.set(
-      ((Math.floor(i / ZEP_SIZE) % ZEP_SIZE) - ZEP_SIZE * 0.5) * ZEP_SPACING.x,
-      ((i % ZEP_SIZE) - ZEP_SIZE * 0.5) * ZEP_SPACING.y,
+//   for (let i = 0; i < ZEP_SIZE * ZEP_SIZE * ZEP_SIZE; i++) {
+//     transform.position.set(
+//       ((Math.floor(i / ZEP_SIZE) % ZEP_SIZE) - ZEP_SIZE * 0.5) * ZEP_SPACING.x,
+//       ((i % ZEP_SIZE) - ZEP_SIZE * 0.5) * ZEP_SPACING.y,
 
-      (Math.floor(i / (ZEP_SIZE * ZEP_SIZE)) - ZEP_SIZE * 0.5) * ZEP_SPACING.z
-    );
-    // transform.rotation.x = Math.random() * Math.PI;
-    // transform.rotation.y = Math.random() * Math.PI;
-    // transform.rotation.z = Math.random() * Math.PI;
-    transform.updateMatrix();
+//       (Math.floor(i / (ZEP_SIZE * ZEP_SIZE)) - ZEP_SIZE * 0.5) * ZEP_SPACING.z
+//     );
+//     // transform.rotation.x = Math.random() * Math.PI;
+//     // transform.rotation.y = Math.random() * Math.PI;
+//     // transform.rotation.z = Math.random() * Math.PI;
+//     transform.updateMatrix();
 
-    meshes.forEach((mesh) => mesh.setMatrixAt(i, transform.matrix));
-  }
+//     meshes.forEach((mesh) => mesh.setMatrixAt(i, transform.matrix));
+//   }
 
-  meshes.forEach((mesh) => zepScene.add(mesh));
+//   meshes.forEach((mesh) => zepScene.add(mesh));
+// });
 
-  // for (let i = 0; i < ZEP_SIZE * ZEP_SIZE * ZEP_SIZE; i++) {
-  //   entities.forEach(({ geometry, material }) => {
-  //     const mesh = new Mesh(geometry, material);
-  //     mesh.rotation.set(
-  //       Math.random() * Math.PI * 2,
-  //       Math.random() * Math.PI * 2,
-  //       Math.random() * Math.PI * 2
-  //     );
-  //     mesh.position.set(
-  //       ((Math.floor(i / ZEP_SIZE) % ZEP_SIZE) - ZEP_SIZE * 0.5) *
-  //         ZEP_SPACING.x,
-  //       ((i % ZEP_SIZE) - ZEP_SIZE * 0.5) * ZEP_SPACING.y,
+/* PERFORMANCE TEST */
+// const zepScene = new Scene();
+// scene.add(zepScene);
+// const ZEP_SPACING = { x: 1, y: 1, z: 1 };
+// const ZEP_SIZE = 0;
+// console.log(`Unit count: ${ZEP_SIZE * ZEP_SIZE * ZEP_SIZE}`);
+// vxlLoader.load(`./assets/models/vxl/sam.vxl`, (data) => {
+//   const entities = [];
+//   const meshes = [];
+//   data.sections.forEach((section) => {
+//     const texture = new VXLData3DTexture(
+//       section,
+//       remapPalette(data.palette, data.paletteRemap, settings.teamColorHue)
+//     );
+//     const geometry = new BoxGeometry(1, 1, 1);
+//     const material = new ShaderMaterial({
+//       glslVersion: GLSL3,
+//       uniforms: {
+//         uMap: { value: texture },
+//         uNormal: { value: texture.normal },
+//         uSize: {
+//           value: new Vector3(section.size.x, section.size.y, section.size.z),
+//         },
+//         uThreshold: { value: 0.8 },
+//         uResolutionMultiplier: { value: 1 },
+//       },
+//       vertexShader: vertex,
+//       fragmentShader: fragment,
+//       side: BackSide,
+//     });
 
-  //       (Math.floor(i / (ZEP_SIZE * ZEP_SIZE)) - ZEP_SIZE * 0.5) * ZEP_SPACING.z
-  //     );
-  //     zepScene.add(mesh);
-  //   });
-  // }
+//     gui
+//       .add(settings, "resolution")
+//       .min(0.01)
+//       .max(16)
+//       .step(0.05)
+//       .onChange(
+//         (resolution) =>
+//           (material.uniforms.uResolutionMultiplier.value = resolution)
+//       );
 
-  // const offsets = new Float32Array(ZEP_SIZE * ZEP_SIZE * ZEP_SIZE * 3);
-  // for (let i = 0; i < ZEP_SIZE * ZEP_SIZE * ZEP_SIZE; i++) {
-  //   const i3 = i * 3;
-  //   offsets[i3 + 0] =
-  //     ((Math.floor(i / ZEP_SIZE) % ZEP_SIZE) - ZEP_SIZE * 0.5) * ZEP_SPACING.x;
-  //   offsets[i3 + 1] = ((i % ZEP_SIZE) - ZEP_SIZE * 0.5) * ZEP_SPACING.y;
-  //   offsets[i3 + 2] =
-  //     (Math.floor(i / (ZEP_SIZE * ZEP_SIZE)) - ZEP_SIZE * 0.5) * ZEP_SPACING.z;
-  // }
-  // geometries.forEach((geometry) =>
-  //   geometry.setAttribute("aOffset", new InstancedBufferAttribute(offsets, 3))
-  // );
+//     meshes.push(
+//       new InstancedMesh(geometry, material, ZEP_SIZE * ZEP_SIZE * ZEP_SIZE)
+//     );
 
-  // const meshes = geometries.map(
-  //   (geometry) => new Points(geometry, voxelMaterial)
-  // );
-  // zepScene.add(...meshes);
-});
+//     entities.push({ geometry, material });
+//   });
+
+//   const transform = new Object3D();
+
+//   for (let i = 0; i < ZEP_SIZE * ZEP_SIZE * ZEP_SIZE; i++) {
+//     transform.position.set(
+//       ((Math.floor(i / ZEP_SIZE) % ZEP_SIZE) - ZEP_SIZE * 0.5) * ZEP_SPACING.x,
+//       ((i % ZEP_SIZE) - ZEP_SIZE * 0.5) * ZEP_SPACING.y,
+
+//       (Math.floor(i / (ZEP_SIZE * ZEP_SIZE)) - ZEP_SIZE * 0.5) * ZEP_SPACING.z
+//     );
+//     // transform.rotation.x = Math.random() * Math.PI;
+//     // transform.rotation.y = Math.random() * Math.PI;
+//     // transform.rotation.z = Math.random() * Math.PI;
+//     transform.updateMatrix();
+
+//     meshes.forEach((mesh) => mesh.setMatrixAt(i, transform.matrix));
+//   }
+
+//   meshes.forEach((mesh) => zepScene.add(mesh));
+// });
 
 // Directional Light
 const directionalLight = new DirectionalLight("#ffffff", 3);
@@ -325,8 +453,8 @@ directionalLight.shadow.normalBias = 0.05;
 directionalLight.position.set(0.25, 2, -2.25);
 scene.add(directionalLight);
 
-const axesHelper = new AxesHelper(5);
-scene.add(axesHelper);
+// const axesHelper = new AxesHelper(5);
+// scene.add(axesHelper);
 
 const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = true;
@@ -357,6 +485,9 @@ const renderLoop: FrameRequestCallback = (time) => {
 
   // Update objects
   voxelMaterial.uniforms.uViewPos.value = camera.position;
+  materials.forEach(
+    (material) => (material.uniforms.uViewPos.value = camera.position)
+  );
 
   // if (mtnk) {
   // subMesh.rotation.set(0, elapsedTimeSec * 1, 0);
