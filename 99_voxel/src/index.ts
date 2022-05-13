@@ -41,12 +41,13 @@ const settings = {
   envMapIntensity: 1.0,
   teamColorHue: 0,
   resolution: 1,
+  clearColor: 0xb5d9b7,
 };
 
 // Debug
 const gui = new GUI({ width: 250 });
 
-const renderer = new WebGLRenderer({ canvas, antialias: true });
+const renderer = new WebGLRenderer({ canvas, antialias: false });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
 // Scene
@@ -61,46 +62,67 @@ camera.position.y = 10;
 camera.position.z = 10;
 scene.add(camera);
 
-const UNITS = [
+const UNITS: Array<{ parts: string[] }> = [
   /* SOVIET */
   { parts: ["smcv"] },
-  { parts: ["htnk", "htnktur", "htnkbarl"] },
-  { parts: ["ttnk", "ttnktur"] },
-  { parts: ["mtnk", "mtnkbarl", "mtnktur"] },
   { parts: ["harv", "harvtur"] },
-  { parts: ["htk", "htkbarl"] },
-  { parts: ["flaktur"] },
-  { parts: ["bpln"] },
-  { parts: ["cdest"] },
-  { parts: ["dred"] },
-  { parts: ["hyd"] },
-  { parts: ["laser"] },
-  { parts: ["sub"] },
-  { parts: ["trs"] },
-  { parts: ["trucka"] },
+  { parts: ["htnk", "htnktur", "htnkbarl"] },
+  { parts: ["htk", "htktur"] },
   { parts: ["v3"] },
+  { parts: ["v3rocket"] },
+  { parts: ["mtnk", "mtnkbarl", "mtnktur"] },
+  { parts: ["ttnk", "ttnktur"] },
+  { parts: ["trucka"] },
+  { parts: ["trs"] },
+  { parts: ["sub"] },
+  { parts: ["subt"] },
+  { parts: ["cdest"] },
+  { parts: ["asw"] },
+  { parts: ["hyd"] },
+  { parts: ["dred"] },
+  { parts: ["dmisl"] },
+  { parts: ["schp"] },
+  { parts: ["schd", "schdtur"] },
   { parts: ["zep"] },
+  { parts: ["zbomb"] },
+  { parts: ["spyp"] },
+  { parts: ["bpln"] },
+  { parts: ["laser"] },
+  { parts: ["flaktur"] },
 
   /* ALLIES */
   { parts: ["mcv"] },
-  { parts: ["bfrt"] },
-  { parts: ["gtgcanbarl", "gtgcantur"] },
   { parts: ["cmin"] },
-  { parts: ["lcrf"] },
-  { parts: ["falc"] },
+  { parts: ["gtnk", "gtnktur", "gtnkbarl"] },
+  { parts: ["fv", "fvtur"] },
+  { parts: ["shad"] },
   { parts: ["rtnk"] },
+  { parts: ["sref", "sreftur"] },
+  { parts: ["bfrt"] },
+  { parts: ["robo", "robotur"] },
   { parts: ["tnkd"] },
+  { parts: ["lcrf"] },
   { parts: ["aegis"] },
+  { parts: ["carrier"] },
+  { parts: ["hornet"] },
+  { parts: ["falc"] },
+  { parts: ["beag"] },
+  { parts: ["sam"] },
+  { parts: ["gtgcanbarl", "gtgcantur"] },
 
   /* YURI */
   { parts: ["pcv"] },
-  { parts: ["bsub"] },
-  { parts: ["hovr"] },
+  { parts: ["smin", "smintur"] },
   { parts: ["ltnk", "ltnktur"] },
-  { parts: ["mind"] },
-  { parts: ["smin"] },
-  { parts: ["tele", "teletur"] },
   { parts: ["ytnk", "ytnktur"] },
+  { parts: ["tele", "teletur"] },
+  { parts: ["caos"] },
+  { parts: ["mind"] },
+  { parts: ["hovr"] },
+  { parts: ["bsub"] },
+  { parts: ["bsubmisl"] },
+  { parts: ["disktur"] },
+  { parts: ["yaggun"] },
 
   /* CIVILIANS */
   { parts: ["cona"] },
@@ -114,6 +136,25 @@ const UNITS = [
   { parts: ["ptruck"] },
   { parts: ["tractor"] },
   { parts: ["tug"] },
+  { parts: ["bcab"] },
+  { parts: ["civp"] },
+  { parts: ["ddbx"] },
+  { parts: ["doly"] },
+  { parts: ["euroc"] },
+  { parts: ["jeep"] },
+  { parts: ["stang"] },
+  { parts: ["suvb"] },
+  { parts: ["suvw"] },
+  { parts: ["taxi"] },
+  { parts: ["truckb"] },
+  { parts: ["wini"] },
+  { parts: ["ycab"] },
+  { parts: ["ambu"] },
+  { parts: ["bus"] },
+  { parts: ["car"] },
+  { parts: ["cblc"] },
+  { parts: ["ftrk"] },
+  { parts: ["tire"] },
 
   // { parts: ["1tnk", "1tnkbarl"] },
   // { parts: ["2tnk", "2tnktur", "2tnkbarl"] },
@@ -217,16 +258,25 @@ UNITS.forEach(({ parts }, index) => {
           side: BackSide,
         });
         materials.push(material);
-        const transformMatrix = section.transformMatrix;
-        const matrix = new Matrix4();
-        matrix.set(...transformMatrix, 0, 0, 0, 1);
         const maxSize = Math.max(
           section.size.x,
           section.size.y,
           section.size.z
         );
+        /* TODO Fix section position */
+        const transformMatrix = section.transformMatrix;
+        const matrix = new Matrix4();
+        // matrix.set(...transformMatrix, 0, 0, 0, 1);
+        // matrix.scale(
+        //   new Vector3(
+        //     maxSize * section.scale,
+        //     maxSize * section.scale,
+        //     maxSize * section.scale
+        //   )
+        // );
         const mesh = new InstancedMesh(geometry, material, 1);
         mesh.setMatrixAt(0, matrix);
+
         mesh.scale.set(
           maxSize * section.scale,
           maxSize * section.scale,
@@ -240,16 +290,16 @@ UNITS.forEach(({ parts }, index) => {
         unitScene.add(mesh);
 
         /* BOUNDS DEBUG */
-        // unitScene.add(
-        //   new Mesh(
-        //     new BoxGeometry(
-        //       section.size.x * section.scale,
-        //       section.size.y * section.scale,
-        //       section.size.z * section.scale
-        //     ),
-        //     new MeshBasicMaterial({ wireframe: true, color: 0xff00ff })
-        //   )
+        // const debugMesh = new Mesh(
+        //   geometry,
+        //   new MeshBasicMaterial({ wireframe: true, color: 0xff00ff })
         // );
+        // const debugMatrix = new Matrix4();
+        // mesh.getMatrixAt(0, debugMatrix);
+        // debugMesh.applyMatrix4(debugMatrix);
+        // debugMesh.scale.copy(mesh.scale);
+        // debugMesh.position.copy(mesh.position);
+        // unitScene.add(debugMesh);
       });
     });
   });
@@ -461,6 +511,11 @@ controls.enableDamping = true;
 
 // Renderer
 renderer.setSize(size.width, size.height);
+renderer.setClearColor(settings.clearColor);
+
+gui
+  .addColor(settings, "clearColor")
+  .onChange((color) => renderer.setClearColor(color));
 
 // Shadow type
 renderer.shadowMap.enabled = true;

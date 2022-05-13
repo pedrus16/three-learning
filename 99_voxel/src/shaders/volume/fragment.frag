@@ -62,20 +62,21 @@ void main() {
             color = texture(uMap, p + 0.5).rgba;
 
             /* Ambient Light */
-            float ambientStrength = 0.5;
+            float ambientStrength = 1.0;
             vec3 ambient = ambientStrength * color.rgb;
 
             /* Directional Light */
             vec3 lightColor = vec3(1.5);
-            vec3 directionLight = normalize(vec3(1.0, 1.0, 1.0));
+            vec3 directionLight = normalize(vec3(1.0, 2.0, 1.0));
             float diff = max(dot(normal, directionLight), 0.0);
             vec3 diffuse = diff * lightColor;
 
             /* Specular Light */
             float specularStrength = 1.0;
+            float specularShine = 8.0;
             vec3 viewDir = normalize(uViewPos - vFragPos);
             vec3 reflectDir = reflect(-directionLight, normal);  
-            float spec = pow(max(dot(viewDir, reflectDir), 0.0), 4.0);
+            float spec = pow(max(dot(viewDir, reflectDir), 0.0), specularShine);
             vec3 specular = specularStrength * spec * lightColor;  
 
             color = vec4((ambient + diffuse + specular) * color.rgb, 1.0);
